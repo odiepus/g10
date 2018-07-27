@@ -1,0 +1,6 @@
+﻿  bpcs.cpp
+c:\users\guak\source\repos\project1\project1\bpcs.cpp(26): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\guak\source\repos\project1\project1\bpcs.cpp(215): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\guak\source\repos\project1\project1\bpcs.cpp(291): warning C4326: return type of 'main' should be 'int' instead of 'void'
+c:\users\guak\source\repos\project1\project1\bpcs.cpp(292): warning C4101: 'x': unreferenced local variable
+  Project1.vcxproj -> C:\Users\guak\source\repos\Project1\Debug\Project1.exe

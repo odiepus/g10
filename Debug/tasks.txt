@@ -1,0 +1,47 @@
+
+input cover file
+//fopen the cover file and place binary data into buffer and treat as 
+//bit array
+
+input message file
+//fopen the message file and place binary data into buffer and treat as 
+//bit array
+
+void grabBits()
+    //This parent function grabs 8x8 bits and uses helper funcs below 
+    //to calc complexity, conjugate, and embed.
+
+double calcHorizComplex()
+    //horizontally from 0 to 7 bitplane convert to CGC and calc complexity.
+    //dont actually convert bitplane in array itself but create temp var to 
+    //hold CGC.
+    //basically count changes 
+    //max changes is 56 for horizontal
+   
+double calcVertComplex()
+    //vertically do same as above and calc complexity
+    //basically count changes 
+    //max changes is 56 for vertical 
+    
+if both vert and horiz complexity below threshold 
+    void increaseComplex()
+//        when embedding ensure the message is complex above threshold
+//        if not then xor with checkerboard array to increase complexity
+//        then embed and record the conjugation of block to conjugation 
+//        map
+
+void embed()
+        //Not sure how to embed.
+        //do we choose the most complex bitplane?
+
+void conjugateBlkMap(int index);
+//    function that creates a conjugation map if not already created 
+//    based on the size of file
+//    knowing the size of cover we can determine the number of 8x8
+//    blocks and number them. Using array we can 0 or 1 the index to
+//    state whether that index/block was conjugated. 
+//    when value is passed to function then that index in array is set
+//    to 1 to denote a conjugated block.
+
+//since we didnt CGC the actual image bit stream we can just save out to 
+//file as is

@@ -26,7 +26,7 @@ unsigned char temp_bits[elementCount][bitBlockSize];
 unsigned char stego_bits[elementCount][bitBlockSize];
 unsigned char *pTempBlock;
 
-char *blockFlag;
+int blockFlag = 0;	//1 for message, 0 for cover
 float alpha = 0.3;
 float blockComplex = 0.0;
 
@@ -261,7 +261,7 @@ float convertToCGC(unsigned char array_bits[elementCount][bitBlockSize]) {
 }
 
 //get 8x8 block and convert to bits
-float getBlockBits(unsigned char *pData, int charsToGet, char *flag) {
+float getBlockBits(unsigned char *pData, int charsToGet, int flag) {
 	int i = 0, m = 0;
 	pTempBlock = pData;
 
@@ -290,7 +290,7 @@ float getBlockBits(unsigned char *pData, int charsToGet, char *flag) {
 	//the arrays will be used later, i think
 	size_t sizeOfArray = sizeof(temp_bits);
 
-	if (strcmp(flag, "c") == 0) {
+	if (flag == 0) {
 		memcpy(cover_bits, temp_bits, sizeOfArray);
 	}
 	else {
@@ -299,7 +299,7 @@ float getBlockBits(unsigned char *pData, int charsToGet, char *flag) {
 		memcpy(message_bits, temp_bits, sizeOfArray);
 	}
 
-	if (strcmp(flag, "c") == 0) {
+	if (flag == 0) {
 		return convertToCGC(temp_bits);
 	}
 	else {
@@ -311,7 +311,9 @@ float getBlockBits(unsigned char *pData, int charsToGet, char *flag) {
 void embed(unsigned char * pMsgBlock, unsigned char *pSrcBlock) {
 	int bitPlane = gNumLSB, i = 0, j = 0;
 	int numOfBitsToEmbed = bitPlane * 8;
-	blockFlag = "m";
+	blockFlag = 1;
+
+	printf("\nBitplane is: %d\n", bitPlane);
 
 	/*i pass in the bitplane because this will get for me the nuber of bits I will embed.
 	suppose bitplane is 4. then we would only want to embed 4*8bits = 32 totals bits to embed.
@@ -324,7 +326,9 @@ void embed(unsigned char * pMsgBlock, unsigned char *pSrcBlock) {
 	if (convertToCGC(message_bits)) {
 		for (j = 0; j < bitPlane; j++) {
 			for (i = 0; i < 8; i++) {
+				printf("Before: Stego bit at bitplane %x is %x\n", bitPlane, stego_bits[i][j]);
 				stego_bits[i][j] = message_bits[i][j];
+				printf("After: Stego bit at bitplane %x is %x\n", bitPlane, stego_bits[i][j]);
 			}
 		}
 
@@ -332,8 +336,7 @@ void embed(unsigned char * pMsgBlock, unsigned char *pSrcBlock) {
 	else {
 
 	}
-
-
+	
 }
 
 // Main function in LSB Steg
@@ -419,11 +422,12 @@ void main(int argc, char *argv[])
 	/*Here is where I start the loop for grabbing bits and checking for complexity and
 	embed if complex enough.*/
 	int n = 0;
+	//for testing I changed size of loop to 8. it should be variable iterateCover
 	for (; n < 8;) {
 
 		//set flag to let getBlockBits func know to grab bits from cover 
 		//convert to CGC and calc coplexity
-		blockFlag = "c";
+		blockFlag = 0;
 
 		//if block complex enuff then embed from here
 		//because we still on the block we working on

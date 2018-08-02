@@ -1,9 +1,6 @@
 ﻿  bpcs.cpp
 c:\users\odiep\source\repos\g10\project1\bpcs.cpp(30): warning C4305: 'initializing': truncation from 'double' to 'float'
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(314): error C2440: '=': cannot convert from 'const char [2]' to 'char *'
-  c:\users\odiep\source\repos\g10\project1\bpcs.cpp(314): note: Conversion from string literal loses const qualifier (see /Zc:strictStrings)
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(342): warning C4326: return type of 'main' should be 'int' instead of 'void'
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(360): warning C4302: 'type cast': truncation from 'char *' to 'unsigned char'
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(362): warning C4302: 'type cast': truncation from 'char *' to 'unsigned char'
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(426): error C2440: '=': cannot convert from 'const char [2]' to 'char *'
-  c:\users\odiep\source\repos\g10\project1\bpcs.cpp(426): note: Conversion from string literal loses const qualifier (see /Zc:strictStrings)
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(345): warning C4326: return type of 'main' should be 'int' instead of 'void'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(363): warning C4302: 'type cast': truncation from 'char *' to 'unsigned char'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(365): warning C4302: 'type cast': truncation from 'char *' to 'unsigned char'
+  Project1.vcxproj -> C:\Users\odiep\source\repos\g10\Debug\Project1.exe

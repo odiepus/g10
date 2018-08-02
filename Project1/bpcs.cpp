@@ -9,11 +9,11 @@
 #include "bpcs.h"
 
 // Global Variables for File Data Pointers
-BITMAPFILEHEADER *pSrcFileHdr, *pTgtFileHdr;
-BITMAPINFOHEADER *pSrcInfoHdr, *pTgtInfoHdr;
+BITMAPFILEHEADER *pCoverFileHdr, *pMsgFileHdr;
+BITMAPINFOHEADER *pCoverInfoHdr, *pMsgInfoHdr;
 RGBQUAD *pSrcColorTable, *pTgtColorTable;
-unsigned char *pSrcFile, *pTgtFile, *pSrcData, *pTgtData, *pSrcBlock;
-int srcFileSize, tgtFileSize;
+unsigned char *pCoverFile, *pMsgFile, *pCoverData, *pMsgData, *pCoverBlock, *pMsgBlock;
+int coverFileSize, msgFileSize, blockNum;
 
 const int bitBlockSize = 8;
 const int elementCount = 64;
@@ -21,16 +21,20 @@ const int elementCount = 64;
 unsigned char toCGC[bitBlockSize][bitBlockSize];
 unsigned char toPBC[256];
 unsigned char cover_bits[elementCount][bitBlockSize];
+unsigned char message_bits[elementCount][bitBlockSize];
+unsigned char temp_bits[elementCount][bitBlockSize];
+unsigned char stego_bits[elementCount][bitBlockSize];
 unsigned char *pTempBlock;
 
+char *blockFlag;
 float alpha = 0.3;
-float blockComplex = 0;
+float blockComplex = 0.0;
 
 
 // default values
 unsigned char gNumLSB = 1, gMask = 0xfe, gShift = 7;
 
-  // Show the various bitmap header bytes primarily for debugging
+// Show the various bitmap header bytes primarily for debugging
 void displayFileInfo(char *pFileName,
 	BITMAPFILEHEADER *pFileHdr,
 	BITMAPINFOHEADER *pFileInfo,
@@ -192,40 +196,54 @@ void printHelp()
 	return;
 } // printHelp
 
-float calcComplexity(unsigned char toCGC[bitBlockSize][bitBlockSize]){
+  // prints help extract message to the screen
+void printHelpExtract()
+{
+	printf("Steg_BPSC: Extracting Mode:\n");
+	printf("Usage: Steg_BPSC -e 'stego filename' ['threshold']\n\n");
+	printf("\tstego filename:\t\tThe name of the file in which a bitmap may be hidden.\n");
+	printf("\tthreshold:\t\tThe number of bits to hide, range is (1 - 7).\n");
+	printf("\t\tIf not specified 1 bit will be used as the default.\n\n");
+	return;
+} // printHelpExtract
+
+float calcComplexity(unsigned char toCGC[bitBlockSize][bitBlockSize]) {
 	int	n = 0, p = 0;
 	//Below i calc the change from bit to bit horiz then vert
 	int horizChangeCount = 0, vertChangeCount = 0;
 	for (p = 0; p < 8; p++) {
 		n = 0;
-		for (; n < 8; n++){ 
+		for (; n < 8; n++) {
 			if (toCGC[n][p] = !toCGC[n + 1][p]) { horizChangeCount++; }
 		}
 	}
-	printf("Horizontal change count is: %d\n", horizChangeCount);
+	printf("Horizontal change count is: %d\nComplexity: %f\n", horizChangeCount, ((float)horizChangeCount / 56.00));
 
 	n = 0;
 	for (; n < 8; n++) {
 		p = 0;
 		for (; p < 8; p++) {
-			if (toCGC[n][p] = !toCGC[n][p+1]) {vertChangeCount++; }
+			if (toCGC[n][p] = !toCGC[n][p + 1]) { vertChangeCount++; }
 		}
 	}
 	printf("Vertical change count is: %d\n", vertChangeCount);
-	blockComplex = (float)(vertChangeCount + horizChangeCount) / 112.0;
-	printf("Block complexity: %lf\n", blockComplex);
 
-	return blockComplex;
+	if ((((float)vertChangeCount / 56.00)> alpha) && (((float)horizChangeCount / 56.00)> alpha)) {
+		return 1;
+	}
+	else {
+		return 0;
+	}
 }
 
-float convertToCGC(unsigned char cover_bits[elementCount][bitBlockSize]) {
+float convertToCGC(unsigned char array_bits[elementCount][bitBlockSize]) {
 	int	n = 0, p = 0;
 	//convert each byte into CGC  
 	for (; n < 8; n++) {
 		p = 1;
-		toCGC[n][0] = cover_bits[n][0];
+		toCGC[n][0] = array_bits[n][0];
 		for (; p < 8; p++) {
-			toCGC[n][p] = cover_bits[n][p] ^ cover_bits[n][p - 1];
+			toCGC[n][p] = array_bits[n][p] ^ array_bits[n][p - 1];
 		}
 	}
 
@@ -243,23 +261,23 @@ float convertToCGC(unsigned char cover_bits[elementCount][bitBlockSize]) {
 }
 
 //get 8x8 block and convert to bits
-float getBlock(unsigned char *pSrcData) {
+float getBlockBits(unsigned char *pData, int charsToGet, char *flag) {
 	int i = 0, m = 0;
-	pTempBlock = pSrcData;
+	pTempBlock = pData;
 
-	printf("Print PCB of 8x8 block\n");
+	printf("Print PCB of (charsToGet)x8 block\n");
 
-	//change bytes to bits of 8x8  I just grab sequentially.
-	for (; i < 8; i++) {
+	//change bytes to bits of (charsToGet)x8  I just grab sequentially.
+	for (; i < charsToGet; i++) {
 		unsigned char currentChar = *pTempBlock;
 
 		int k = 0;
 		for (; k < 8; k++) {
-			unsigned char x = (unsigned char)currentChar;//clean copy of char to work with
+			unsigned char x = currentChar;//clean copy of char to work with
 			unsigned char y = x << k; //remove unwanted higher bits by shifting bit we want to MSB
 			unsigned char z = y >> 7;//then shift the bit we want all the way down to LSB
-			cover_bits[m][k] = z; //then store out wanted bit to our storage array
-			printf("%d-", cover_bits[m][k]);
+			temp_bits[m][k] = z; //then store out wanted bit to our storage array
+			printf("%d-", temp_bits[m][k]);
 		}
 
 		printf("Value: %x, Address: %p\n", *pTempBlock, (void *)pTempBlock);
@@ -268,43 +286,81 @@ float getBlock(unsigned char *pSrcData) {
 		m++;
 	}
 
-	// test to see if I got the correct bits
-	//printf("%d-", cover_bits[7][0]);
-	//printf("%d-", cover_bits[7][1]);
-	//printf("%d-", cover_bits[7][2]);
-	//printf("%d-", cover_bits[7][3]);
-	//printf("%d-", cover_bits[7][4]);
-	//printf("%d-", cover_bits[7][5]);
-	//printf("%d-", cover_bits[7][6]);
-	//printf("%d-", cover_bits[7][7]);
-	//printf("\n");
+	//get size of bit stream so i can copy it to its respective array
+	//the arrays will be used later, i think
+	size_t sizeOfArray = sizeof(temp_bits);
 
-	return convertToCGC(cover_bits);
+	if (strcmp(flag, "c") == 0) {
+		memcpy(cover_bits, temp_bits, sizeOfArray);
+	}
+	else {
+
+		size_t sizeM = sizeof(message_bits);
+		memcpy(message_bits, temp_bits, sizeOfArray);
+	}
+
+	if (strcmp(flag, "c") == 0) {
+		return convertToCGC(temp_bits);
+	}
+	else {
+		return 0;
+	}
 }
 
 
+void embed(unsigned char * pMsgBlock, unsigned char *pSrcBlock) {
+	int bitPlane = gNumLSB, i = 0, j = 0;
+	int numOfBitsToEmbed = bitPlane * 8;
+	blockFlag = "m";
+
+	/*i pass in the bitplane because this will get for me the nuber of bits I will embed.
+	suppose bitplane is 4. then we would only want to embed 4*8bits = 32 totals bits to embed.
+	thus when i return the message_bits array will have all the bits I need to embed into
+	the cover bits in a new array stego_bits.*/
+	getBlockBits(pMsgBlock, bitPlane, blockFlag);
+	//printf("%c\n", message_bits[0][0]);
+
+	//starting at the LSB bit plane start embeding and stop at the defined bit plane
+	if (convertToCGC(message_bits)) {
+		for (j = 0; j < bitPlane; j++) {
+			for (i = 0; i < 8; i++) {
+				stego_bits[i][j] = message_bits[i][j];
+			}
+		}
+
+	}
+	else {
+
+	}
 
 
-  // Main function in LSB Steg
-  // Parameters are used to indicate the input file and available options
+}
+
+// Main function in LSB Steg
+// Parameters are used to indicate the input file and available options
 void main(int argc, char *argv[])
 {
-	int x;
-
 	if (argc < 3 || argc > 4)
 	{
 		printHelp();
+		printHelpExtract();
 		return;
 	}
 
+	//Roberts CODE;
 	// get the number of bits to use for data hiding or data extracting
 	// if not specified, default to one
-	if (argc == 4)
+	if ((strcmp(argv[1], "-h") == 0 && argc == 5) || (strcmp(argv[1], "-e") == 0 && argc == 4))
 	{
 		// the range for gNumLSB is 1 - 7;  if gNumLSB == 0, then the mask would be 0xFF and the
 		// shift value would be 8, leaving the target unmodified during embedding or extracting
 		// if gNumLSB == 8, then the source would completely replace the target
-		gNumLSB = *(argv[3]) - 48;
+
+		if (strcmp(argv[1], "-h") == 0)
+			gNumLSB = (unsigned char)argv[4];
+		else if (strcmp(argv[1], "-e") == 0)
+			gNumLSB = (unsigned char)argv[3];
+
 		if (gNumLSB < 1 || gNumLSB > 7)
 		{
 			gNumLSB = 1;
@@ -313,70 +369,90 @@ void main(int argc, char *argv[])
 		gMask = 256 - (int)pow(2, gNumLSB);
 		gShift = 8 - gNumLSB;
 	}
+	/* Format for hiding		argc
+	0	exe					1
+	1	-h					2
+	2	cover file			3
+	3	message file		4
+	4	threshold			5
+	*/
+
+	// read the message file
+	pMsgFile = readFile(argv[2], &msgFileSize);
+	if (pMsgFile == NULL) return;
+
+	// Set up pointers to various parts of message file
+	pMsgFileHdr = (BITMAPFILEHEADER *)pMsgFile;
+	pMsgInfoHdr = (BITMAPINFOHEADER *)(pMsgFile + sizeof(BITMAPFILEHEADER));
+	pTgtColorTable = (RGBQUAD *)(pMsgFile + sizeof(BITMAPFILEHEADER) + pMsgInfoHdr->biSize);
+
+	//pointer to start of data in the message file
+	//will be used to grab bits and embed into cover.
+	pMsgData = pMsgFile + pMsgFileHdr->bfOffBits;
+
+	int sizeOfMsgData = pMsgFileHdr->bfSize - pMsgFileHdr->bfOffBits;
+
 
 	// read the source file
-	pSrcFile = readFile(argv[1], &srcFileSize);
-	if (pSrcFile == NULL) return;
+	pCoverFile = readFile(argv[1], &coverFileSize);
+	if (pCoverFile == NULL) return;
 
 	// Set up pointers to various parts of the source file
-	pSrcFileHdr = (BITMAPFILEHEADER *)pSrcFile;
-	pSrcInfoHdr = (BITMAPINFOHEADER *)(pSrcFile + sizeof(BITMAPFILEHEADER));
+	pCoverFileHdr = (BITMAPFILEHEADER *)pCoverFile;
+	pCoverInfoHdr = (BITMAPINFOHEADER *)(pCoverFile + sizeof(BITMAPFILEHEADER));
 
 	// pointer to first RGB color palette, follows file header and bitmap header
-	pSrcColorTable = (RGBQUAD *)(pSrcFile + sizeof(BITMAPFILEHEADER) + pSrcInfoHdr->biSize);
+	pSrcColorTable = (RGBQUAD *)(pCoverFile + sizeof(BITMAPFILEHEADER) + pCoverInfoHdr->biSize);
 
 	// file header indicates where image data begins
-	pSrcData = pSrcFile + pSrcFileHdr->bfOffBits;
+	pCoverData = pCoverFile + pCoverFileHdr->bfOffBits;
 
-	pSrcBlock = pSrcData;
-	printf("Size of file: %ld\n", pSrcFileHdr->bfSize);
+	pCoverBlock = pCoverData;
+	printf("Size of file: %ld\n", pCoverFileHdr->bfSize);
 
-	int sizeOfData = pSrcFileHdr->bfSize - pSrcFileHdr->bfOffBits;
-	
-	int iterate = sizeOfData - (sizeOfData % 8);
-	printf("Size of data: %ld\n", sizeOfData);
+	int sizeOfCoverData = pCoverFileHdr->bfSize - pCoverFileHdr->bfOffBits;
+	int iterateCover = sizeOfCoverData - (sizeOfCoverData % 8);
 
-	/*Here is where I start the loop for grabbing bits and checking for complexity and 
+	//testing
+	//embed(pCoverBlock, pMsgData);
+
+	/*Here is where I start the loop for grabbing bits and checking for complexity and
 	embed if complex enough.*/
 	int n = 0;
-	for (; n < iterate;) {
-		
+	for (; n < 8;) {
+
+		//set flag to let getBlockBits func know to grab bits from cover 
+		//convert to CGC and calc coplexity
+		blockFlag = "c";
+
 		//if block complex enuff then embed from here
 		//because we still on the block we working on
-		if (getBlock(pSrcBlock) > alpha) { 
+		if (getBlockBits(pCoverBlock, 8, blockFlag)) {
 			printf("Complex enough!!!!\n\n");
+			embed(pCoverBlock, pMsgData);
 		}
 		//if block not complex enuff then move on to next block
 		else {
 			printf("Not complex enough!!!!\n\n");
 		}
-		pSrcBlock = pSrcBlock + 8;
+		pCoverBlock = pCoverBlock + 8;
 		n = n + 8;
-		printf("%d, %d\n", n, sizeOfData);
+		printf("%d, %d\n", n, sizeOfCoverData);
 	}
-	
-	 //for debugging purposes, show file info on the screen
-	//displayFileInfo(argv[1], pSrcFileHdr, pSrcInfoHdr, pSrcColorTable, pSrcData);
 
-
-	// read the target file
-	pTgtFile = readFile(argv[2], &tgtFileSize);
-	if (pTgtFile == NULL) return;
-
-	// Set up pointers to various parts of file
-	pTgtFileHdr = (BITMAPFILEHEADER *)pTgtFile;
-	pTgtInfoHdr = (BITMAPINFOHEADER *)(pTgtFile + sizeof(BITMAPFILEHEADER));
-	pTgtColorTable = (RGBQUAD *)(pTgtFile + sizeof(BITMAPFILEHEADER) + pTgtInfoHdr->biSize);
-	pTgtData = pTgtFile + pTgtFileHdr->bfOffBits;
+	//for debugging purposes, show file info on the screen
+	//displayFileInfo(argv[1], pCoverFileHdr, pSrcInfoHdr, pSrcColorTable, pCoverData);
 
 	// for debugging purposes, show file info on the screen
-	//displayFileInfo(argv[2], pTgtFileHdr, pTgtInfoHdr, pTgtColorTable, pTgtData);
+	//displayFileInfo(argv[2], pMsgFileHdr, pMsgInfoHdr, pTgtColorTable, pMsgData);
 
 	// write the file to disk
-	//x = writeFile(pTgtFile, pTgtFileHdr->bfSize, argv[2]);
-	printf("Pointer value to start of data: %x, At Address: %p\n", *pSrcData, (void *)pSrcData);
-	printf("Pointer value to end of data: %x, At Address: %p\n", *pSrcBlock, (void *)pSrcBlock);
-	printf("%d\n", pSrcFileHdr->bfOffBits);
+	//x = writeFile(pMsgFile, pMsgFileHdr->bfSize, argv[2]);
+	printf("Pointer value to start of data: %x, At Address: %p\n", *pCoverData, (void *)pCoverData);
+	printf("Pointer value to end of data: %x, At Address: %p\n", *pCoverBlock, (void *)pCoverBlock);
+	printf("Size of Cover data: %ld\n", sizeOfCoverData);
+	printf("Size of Message data: %ld\n", sizeOfMsgData);
+	printf("%d\n", pCoverFileHdr->bfOffBits);
 	return;
 } // main
 

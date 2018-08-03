@@ -9,25 +9,25 @@
 #include "bpcs.h"
 
 // Global Variables for File Data Pointers
-BITMAPFILEHEADER *pCoverFileHdr, *pMsgFileHdr;
-BITMAPINFOHEADER *pCoverInfoHdr, *pMsgInfoHdr;
+BITMAPFILEHEADER *pCoverFileHdr, *pMsgFileHdr, *pStegoFileHdr;
+BITMAPINFOHEADER *pCoverInfoHdr, *pMsgInfoHdr, *pStegoInfoHdr;
 RGBQUAD *pSrcColorTable, *pTgtColorTable;
-unsigned char *pCoverFile, *pMsgFile, *pCoverData, *pMsgData, *pCoverBlock, *pMsgBlock;
+unsigned char *pCoverFile, *pMsgFile, *pStegoFile, *pCoverData, *pMsgData, *pStegoData, *pCoverBlock, *pMsgBlock, *pStegoBlock;
 int coverFileSize, msgFileSize, blockNum;
 
 const int bitBlockSize = 8;
-const int elementCount = 64;
+const int blockSize = 8;
 
 unsigned char toCGC[bitBlockSize][bitBlockSize];
 unsigned char toPBC[256];
-unsigned char cover_bits[elementCount][bitBlockSize];
-unsigned char message_bits[elementCount][bitBlockSize];
-unsigned char temp_bits[elementCount][bitBlockSize];
-unsigned char stego_bits[elementCount][bitBlockSize];
+unsigned char cover_bits[blockSize][bitBlockSize];
+unsigned char message_bits[blockSize][bitBlockSize];
+unsigned char temp_bits[blockSize][bitBlockSize];
+unsigned char stego_bits[blockSize][bitBlockSize];
 unsigned char *pTempBlock;
 
 int blockFlag = 0;	//1 for message, 0 for cover
-float alpha = 0.3;
+float alpha = 0.30;
 float blockComplex = 0.0;
 
 
@@ -217,7 +217,7 @@ float calcComplexity(unsigned char toCGC[bitBlockSize][bitBlockSize]) {
 			if (toCGC[n][p] = !toCGC[n + 1][p]) { horizChangeCount++; }
 		}
 	}
-	printf("Horizontal change count is: %d\nComplexity: %f\n", horizChangeCount, ((float)horizChangeCount / 56.00));
+	//printf("Horizontal change count is: %d\nComplexity: %f\n", horizChangeCount, ((float)horizChangeCount / 56.00));
 
 	n = 0;
 	for (; n < 8; n++) {
@@ -226,7 +226,7 @@ float calcComplexity(unsigned char toCGC[bitBlockSize][bitBlockSize]) {
 			if (toCGC[n][p] = !toCGC[n][p + 1]) { vertChangeCount++; }
 		}
 	}
-	printf("Vertical change count is: %d\n", vertChangeCount);
+	//printf("Vertical change count is: %d\n", vertChangeCount);
 
 	if ((((float)vertChangeCount / 56.00)> alpha) && (((float)horizChangeCount / 56.00)> alpha)) {
 		return 1;
@@ -236,7 +236,7 @@ float calcComplexity(unsigned char toCGC[bitBlockSize][bitBlockSize]) {
 	}
 }
 
-float convertToCGC(unsigned char array_bits[elementCount][bitBlockSize]) {
+float convertToCGC(unsigned char array_bits[blockSize][bitBlockSize]) {
 	int	n = 0, p = 0;
 	//convert each byte into CGC  
 	for (; n < 8; n++) {
@@ -248,13 +248,13 @@ float convertToCGC(unsigned char array_bits[elementCount][bitBlockSize]) {
 	}
 
 	//print out CGC
-	printf("Print CGC of 8x8 block\n");
-	for (n = 0; n < 8; n++) {
-		for (p = 0; p < 8; p++) {
-			printf("%d-", toCGC[n][p]);
-		}
-		printf("\n");
-	}
+	//printf("Print CGC of 8x8 block\n");
+	//for (n = 0; n < 8; n++) {
+	//	for (p = 0; p < 8; p++) {
+	//		printf("%d-", toCGC[n][p]);
+	//	}
+	//	printf("\n");
+	//}
 	printf("\n");
 
 	return calcComplexity(toCGC);
@@ -265,7 +265,7 @@ float getBlockBits(unsigned char *pData, int charsToGet, int flag) {
 	int i = 0, m = 0;
 	pTempBlock = pData;
 
-	printf("Print PCB of (charsToGet)x8 block\n");
+	//printf("Print PCB of (charsToGet)x8 block\n");
 
 	//change bytes to bits of (charsToGet)x8  I just grab sequentially.
 	for (; i < charsToGet; i++) {
@@ -277,11 +277,11 @@ float getBlockBits(unsigned char *pData, int charsToGet, int flag) {
 			unsigned char y = x << k; //remove unwanted higher bits by shifting bit we want to MSB
 			unsigned char z = y >> 7;//then shift the bit we want all the way down to LSB
 			temp_bits[m][k] = z; //then store out wanted bit to our storage array
-			printf("%d-", temp_bits[m][k]);
+			//printf("%d-", temp_bits[m][k]);
 		}
 
-		printf("Value: %x, Address: %p\n", *pTempBlock, (void *)pTempBlock);
-		printf("\n");
+		//printf("Value: %x, Address: %p\n", *pTempBlock, (void *)pTempBlock);
+		//printf("\n");
 		pTempBlock++;
 		m++;
 	}
@@ -291,12 +291,22 @@ float getBlockBits(unsigned char *pData, int charsToGet, int flag) {
 	size_t sizeOfArray = sizeof(temp_bits);
 
 	if (flag == 0) {
-		memcpy(cover_bits, temp_bits, sizeOfArray);
+		int j = 0;
+		for (; j < charsToGet; j++) {
+			int k = 0;
+			for (; k < bitBlockSize; k++) {
+				cover_bits[j][k] = temp_bits[j][k];
+			}
+		}
 	}
 	else {
-
-		size_t sizeM = sizeof(message_bits);
-		memcpy(message_bits, temp_bits, sizeOfArray);
+		int j = 0;
+		for (; j < blockSize; j++) {
+			int k = 0;
+			for (; k < bitBlockSize; k++) {
+				message_bits[j][k] = temp_bits[j][k];
+			}
+		}
 	}
 
 	if (flag == 0) {
@@ -308,9 +318,8 @@ float getBlockBits(unsigned char *pData, int charsToGet, int flag) {
 }
 
 
-void embed(unsigned char * pMsgBlock, unsigned char *pSrcBlock) {
-	int bitPlane = gNumLSB, i = 0, j = 0;
-	int numOfBitsToEmbed = bitPlane * 8;
+void embed(unsigned char *pMsgBlock) {
+	int bitPlane = 4;
 	blockFlag = 1;
 
 	printf("\nBitplane is: %d\n", bitPlane);
@@ -320,29 +329,73 @@ void embed(unsigned char * pMsgBlock, unsigned char *pSrcBlock) {
 	thus when i return the message_bits array will have all the bits I need to embed into
 	the cover bits in a new array stego_bits.*/
 	getBlockBits(pMsgBlock, bitPlane, blockFlag);
-	//printf("%c\n", message_bits[0][0]);
+	printf("Want to embed into this:\n");
 
-	//starting at the LSB bit plane start embeding and stop at the defined bit plane
-	if (convertToCGC(message_bits)) {
-		for (j = 0; j < bitPlane; j++) {
-			for (i = 0; i < 8; i++) {
-				printf("Before: Stego bit at bitplane %x is %x\n", bitPlane, stego_bits[i][j]);
-				stego_bits[i][j] = message_bits[i][j];
-				printf("After: Stego bit at bitplane %x is %x\n", bitPlane, stego_bits[i][j]);
-			}
+	//copy cover bits to stego bits 
+	int c = 0;
+	for (; c < blockSize; c++) {
+		int d = 0;
+		for (; d < bitBlockSize; d++) {
+			stego_bits[c][d] = cover_bits[c][d];
+			printf("%d-", stego_bits[c][d]);
 		}
+		printf("\n");
 
 	}
-	else {
 
+
+	
+	printf("\nMessage stream I will embed into stego bit block\n");
+	//message bits should never be more than 64 bits total
+	unsigned char temp_array[64];
+	//copy message bits to linear temp array for easier copying into stego array
+	int e = 0, f = 0;
+	for (; e < bitPlane; e++) {
+		int b = 0;
+		for (; b < bitBlockSize; b++) {
+			temp_array[f] = message_bits[e][b];
+			printf("%d", temp_array[f]);
+			f++;
+		}
+	}
+	printf("\n");
+	printf("\n");
+
+	f = 0;
+	int g = 7, h = 0;
+	//starting at the LSB bit plane start embeding and stop at the defined bit plane
+	//because in earlier part of code I save msb at index 0 of arrays I have to 
+	//start embedding at index 7 of these arrays to embed at LSB
+	while (f < bitPlane * 8) {
+		for(h = 0; h <bitBlockSize; h++){
+			//printf("g: %d, h: %d, f: %d\n", g, h, f);
+			stego_bits[h][g] = temp_array[f];
+			f++;
+		}
+		g--;
+		if (g < 0) g = 7;
+	}
+
+
+	printf("What the stego bit block looks like after embed:\n");
+	int i = 0;
+	for (i = 0; i < 8; i++) {
+		int d = 0;
+		for (; d < 8; d++) {
+			printf("%d-", stego_bits[i][d]);
+		}
+		printf("\n");
 	}
 	
+	printf("\n");
+	printf("\n");
 }
 
 // Main function in LSB Steg
 // Parameters are used to indicate the input file and available options
 void main(int argc, char *argv[])
 {
+
 	if (argc < 3 || argc > 4)
 	{
 		printHelp();
@@ -419,8 +472,22 @@ void main(int argc, char *argv[])
 	//testing
 	//embed(pCoverBlock, pMsgData);
 
+	//create spcae in heap to hold the stego'ed output file data
+	pStegoFile = (unsigned char *)malloc(pCoverFileHdr->bfSize);
+
+	//copy entire cover file into a new heap space
+	//this will be our output where our secret message will be contained.
+	memcpy(pStegoFile, pCoverFile, coverFileSize);
+
+	pStegoFileHdr = (BITMAPFILEHEADER *)pStegoFile;
+	pStegoInfoHdr = (BITMAPINFOHEADER *)(pStegoFile + sizeof(BITMAPFILEHEADER));
+
+	pStegoData = pStegoFile + pStegoFileHdr->bfOffBits;
+	
 	/*Here is where I start the loop for grabbing bits and checking for complexity and
-	embed if complex enough.*/
+	embed if complex enough. I move the cover data pointer every 8 chars for each iteration.
+	The message data pointer should move every bitplane for every iteration and the stego data pointer 
+	should move every 8 chars for every iteration. */
 	int n = 0;
 	//for testing I changed size of loop to 8. it should be variable iterateCover
 	for (; n < 8;) {
@@ -431,9 +498,9 @@ void main(int argc, char *argv[])
 
 		//if block complex enuff then embed from here
 		//because we still on the block we working on
-		if (getBlockBits(pCoverBlock, 8, blockFlag)) {
+		if (getBlockBits(pCoverBlock, blockSize, blockFlag)) {
 			printf("Complex enough!!!!\n\n");
-			embed(pCoverBlock, pMsgData);
+			embed(pMsgData);
 		}
 		//if block not complex enuff then move on to next block
 		else {
@@ -441,7 +508,7 @@ void main(int argc, char *argv[])
 		}
 		pCoverBlock = pCoverBlock + 8;
 		n = n + 8;
-		printf("%d, %d\n", n, sizeOfCoverData);
+		printf("Iteration: %d, Size of cover: %d\n", n, sizeOfCoverData);
 	}
 
 	//for debugging purposes, show file info on the screen
@@ -452,12 +519,13 @@ void main(int argc, char *argv[])
 
 	// write the file to disk
 	//x = writeFile(pMsgFile, pMsgFileHdr->bfSize, argv[2]);
-	printf("Pointer value to start of data: %x, At Address: %p\n", *pCoverData, (void *)pCoverData);
-	printf("Pointer value to end of data: %x, At Address: %p\n", *pCoverBlock, (void *)pCoverBlock);
-	printf("Size of Cover data: %ld\n", sizeOfCoverData);
-	printf("Size of Message data: %ld\n", sizeOfMsgData);
-	printf("%d\n", pCoverFileHdr->bfOffBits);
-	return;
+	//printf("Pointer value to start of data: %x, At Address: %p\n", *pCoverData, (void *)pCoverData);
+	//printf("Pointer value to end of data: %x, At Address: %p\n", *pCoverBlock, (void *)pCoverBlock);
+	//printf("Size of Cover data: %ld\n", sizeOfCoverData);
+	//printf("Size of Message data: %ld\n", sizeOfMsgData);
+	//printf("%d\n", pCoverFileHdr->bfOffBits);
+
+
 } // main
 
 

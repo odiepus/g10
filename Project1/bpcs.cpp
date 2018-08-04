@@ -145,7 +145,7 @@ unsigned char *readFile(char *fileName, int *fileSize)
 
   // writes modified bitmap file to disk
   // gMask used to determine the name of the file
-int writeFile(unsigned char *pFile, int fileSize, char *fileName)
+int writeFile(unsigned char *pFile, int fileSize, int flag)
 {
 	FILE *ptrFile;
 	char newFileName[256], msk[4];
@@ -155,16 +155,19 @@ int writeFile(unsigned char *pFile, int fileSize, char *fileName)
 	sprintf(msk, "%02x", gMask);
 
 	// make a new filename based upon the original
-	strcpy(newFileName, fileName);
+	strcpy(newFileName, "Output_File");
 
 	// remove the .bmp (assumed)
 	x = (int)strlen(newFileName) - 4;
 	newFileName[x] = 0;
 
+	//If the switch is set to -h
+	if (flag == 1) {
 	strcat(newFileName, "_mask_");
-	strcat(newFileName, msk);	// name indicates which bit plane(s) was/were saved
+	strcat(newFileName, msk);	// name indicates which bit plane(s) was/were saved  
+	}
 
-								// add the .bmp back to the file name
+	// add the .bmp back to the file name
 	strcat(newFileName, ".bmp");
 
 	// open the new file, MUST set binary format (text format will add line feed characters)
@@ -192,7 +195,7 @@ int writeFile(unsigned char *pFile, int fileSize, char *fileName)
 void printHelpHide()
 {
 	printf("BPCS: Hiding Mode:\n");
-	printf("Usage: bpcs.exe -h 'source filename' 'target filename' ['threshold'] [bit slice]\n\n");
+	printf("Usage: Project1.exe -h 'source filename' 'target filename' ['threshold'] [bit slice]\n\n");
 	printf("\tsource filename:\tThe name of the bitmap file to hide.\n");
 	printf("\ttarget filename:\tThe name of the bitmap file to conceal within the source.\n");
 	printf("\tthreshold:\t\tThe number of bits to hide, range is (.3 - .5).\n");
@@ -205,7 +208,7 @@ void printHelpHide()
 void printHelpExtract()
 {
 	printf("BPCS: Extracting Mode:\n");
-	printf("Usage: bpcs.exe -e 'stego filename' ['threshold'] [bit slice]\n\n");
+	printf("Usage: Project1.exe -e 'stego filename' ['threshold'] [bit slice]\n\n");
 	printf("\tstego filename:\t\tThe name of the file in which a bitmap may be hidden.\n");
 	printf("\tthreshold:\t\tThe number of bits to hide, range is (.3 - .5).\n");
 	printf("The bit slice is the number of bits to hide or extract, range is (1 - 7).\n");
@@ -461,7 +464,8 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 // Parameters are used to indicate the input file and available options
 void main(int argc, char *argv[])
 {
-
+	//flag for the switches -h(1) or -e(0) 
+	int flag = 0;
 	if (argc < 3 || argc > 6)
 	{
 		printHelpHide();
@@ -475,11 +479,14 @@ void main(int argc, char *argv[])
 	if ((strcmp(argv[1], "-h") == 0 && argc == 6) || (strcmp(argv[1], "-e") == 0 && argc == 5))
 	{
 		//assigns the threshold for hiding/extracting and assigns a default if not entered or invalid range
-		if (strcmp(argv[1], "-h") == 0)
+		if (strcmp(argv[1], "-h") == 0) {
 			alpha = atof(argv[4]);
-		else if (strcmp(argv[1], "-e") == 0)
+			flag = 1;
+		}
+		else if (strcmp(argv[1], "-e") == 0) {
 			alpha = atof(argv[3]);
-
+			flag = 0;
+		}
 		if (alpha < .3 || alpha > .5)
 		{
 			alpha = .3;
@@ -499,6 +506,7 @@ void main(int argc, char *argv[])
 			printf("The number specified for LSB was invalid, using the default value of '1'.\n\n");
 		}
 	}
+	printf("The flag is set to: %c\n", flag);
 	/* Format for hiding		argc
 	0	exe					1
 	1	-h					2
@@ -597,7 +605,14 @@ void main(int argc, char *argv[])
 	//displayFileInfo(argv[2], pMsgFileHdr, pMsgInfoHdr, pTgtColorTable, pMsgData);
 
 	// write the file to disk
-	//x = writeFile(pMsgFile, pMsgFileHdr->bfSize, argv[2]);
+	//if(flag == 1)
+	//	writeFile(pStegoFile, pStegoFileHdr->bfSize, flag);
+	//elseif(flag == 0)
+	//	writeFile(extractedFile, extractedFile->bfSize, flag);
+
+
+
+
 	//printf("Pointer value to start of data: %x, At Address: %p\n", *pCoverData, (void *)pCoverData);
 	//printf("Pointer value to end of data: %x, At Address: %p\n", *pCoverBlock, (void *)pCoverBlock);
 	//printf("Size of Cover data: %ld\n", sizeOfCoverData);

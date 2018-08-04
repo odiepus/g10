@@ -3,9 +3,13 @@
 #pragma warning(disable : 4996)
 
 #include <windows.h>
+#include <iostream>
 #include <stdio.h>
 #include <io.h>
 #include <math.h>
+#include <string>
+#include <map>
+#include <iterator>
 #include "bpcs.h"
 
 // Global Variables for File Data Pointers
@@ -318,9 +322,15 @@ float getBlockBits(unsigned char *pData, int charsToGet, int flag) {
 }
 
 
-void embed(unsigned char *pMsgBlock) {
+void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 	int bitPlane = 4;
 	blockFlag = 1;
+
+	unsigned char *pMsgBlockBit;
+	pMsgBlockBit = pMsgBlock;
+
+	unsigned char *pStegoBlockIterate;
+	pStegoBlockIterate = pStegoBlock;
 
 	printf("\nBitplane is: %d\n", bitPlane);
 
@@ -328,7 +338,7 @@ void embed(unsigned char *pMsgBlock) {
 	suppose bitplane is 4. then we would only want to embed 4*8bits = 32 totals bits to embed.
 	thus when i return the message_bits array will have all the bits I need to embed into
 	the cover bits in a new array stego_bits.*/
-	getBlockBits(pMsgBlock, bitPlane, blockFlag);
+	getBlockBits(pMsgBlockBit, bitPlane, blockFlag);
 	printf("Want to embed into this:\n");
 
 	//copy cover bits to stego bits 
@@ -343,8 +353,6 @@ void embed(unsigned char *pMsgBlock) {
 
 	}
 
-
-	
 	printf("\nMessage stream I will embed into stego bit block\n");
 	//message bits should never be more than 64 bits total
 	unsigned char temp_array[64];
@@ -385,6 +393,62 @@ void embed(unsigned char *pMsgBlock) {
 			printf("%d-", stego_bits[i][d]);
 		}
 		printf("\n");
+	}
+	printf("\n");
+	printf("\n");
+
+
+	std::map<std::string, std::string> mapOfHexValues;
+	mapOfHexValues.insert(std::make_pair("0000", "0"));
+	mapOfHexValues.insert(std::make_pair("0001", "1"));
+	mapOfHexValues.insert(std::make_pair("0010", "2"));
+	mapOfHexValues.insert(std::make_pair("0011", "3"));
+	mapOfHexValues.insert(std::make_pair("0100", "4"));
+	mapOfHexValues.insert(std::make_pair("0101", "5"));
+	mapOfHexValues.insert(std::make_pair("0110", "6"));
+	mapOfHexValues.insert(std::make_pair("0111", "7"));
+	mapOfHexValues.insert(std::make_pair("1000", "8"));
+	mapOfHexValues.insert(std::make_pair("1001", "9"));
+	mapOfHexValues.insert(std::make_pair("1010", "A"));
+	mapOfHexValues.insert(std::make_pair("1011", "B"));
+	mapOfHexValues.insert(std::make_pair("1100", "C"));
+	mapOfHexValues.insert(std::make_pair("1101", "D"));
+	mapOfHexValues.insert(std::make_pair("1110", "E"));
+	mapOfHexValues.insert(std::make_pair("1111", "F"));
+
+	printf("Writing the following to Stegofile in heap\n");
+	int sum = 0;
+	for (i = 0; i < 8; i++) {
+		int d = 0, sum = 0;
+		for (; d < 8; d++) {
+			if (stego_bits[i][d] == 1) {
+				sum += pow(2, (7 - d));
+			}
+		}
+
+		*pStegoBlockIterate = sum;
+		printf("Value: %x, Address: %p\n", *pStegoBlockIterate, (void *)pStegoBlockIterate);
+		pStegoBlockIterate++;
+		//sprintf(c1, "%d%d%d%d", stego_bits[i][0], stego_bits[i][1], stego_bits[i][2], stego_bits[i][3]);
+		//sprintf(c2, "%d%d%d%d", stego_bits[i][4], stego_bits[i][5], stego_bits[i][6], stego_bits[i][7]);
+		//std::map<std::string, std::string>::iterator it;
+		//
+		//it = mapOfHexValues.find(c1);
+		//if (it == mapOfHexValues.end()) {
+		//	printf("value not found\n");
+		//}
+
+		//it = mapOfHexValues.find(c2);
+		//if (it == mapOfHexValues.end()) {
+		//	printf("value not found\n");
+		//}
+
+		//std::string str1 = mapOfHexValues.find(c1)->second + mapOfHexValues.find(c2)->second;
+		//std::cout << str1 << std::endl;
+		////*pMsgBlockIterate = ( char)str1.c_str();
+		//*pStegoBlockIterate = (unsigned char)'BA';
+
+
 	}
 	
 	printf("\n");
@@ -484,6 +548,10 @@ void main(int argc, char *argv[])
 
 	pStegoData = pStegoFile + pStegoFileHdr->bfOffBits;
 	
+	printf("Value: %ld, Address: %p\n", *pStegoData, (void *)pStegoData);
+	*pStegoData = 40;
+	printf("Value: %ld, Address: %p\n", *pStegoData, (void *)pStegoData);
+
 	/*Here is where I start the loop for grabbing bits and checking for complexity and
 	embed if complex enough. I move the cover data pointer every 8 chars for each iteration.
 	The message data pointer should move every bitplane for every iteration and the stego data pointer 
@@ -500,7 +568,7 @@ void main(int argc, char *argv[])
 		//because we still on the block we working on
 		if (getBlockBits(pCoverBlock, blockSize, blockFlag)) {
 			printf("Complex enough!!!!\n\n");
-			embed(pMsgData);
+			embed(pMsgData, pStegoData);
 		}
 		//if block not complex enuff then move on to next block
 		else {

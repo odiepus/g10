@@ -31,6 +31,7 @@ unsigned char stego_bits[blockSize][bitBlockSize];
 unsigned char *pTempBlock;
 
 int blockFlag = 0;	//1 for message, 0 for cover
+//alpha is the threshold variable
 float alpha = 0.30;
 float blockComplex = 0.0;
 
@@ -188,26 +189,25 @@ int writeFile(unsigned char *pFile, int fileSize, char *fileName)
 } // writeFile
 
   // prints help message to the screen
-void printHelp()
+void printHelpHide()
 {
-	printf("Usage: Steg_LSB 'source filename' 'target filename' [bits to use] \n\n");
-	printf("Where 'source filename' is the name of the bitmap file to hide.\n");
-	printf("Where 'target filename' is the name of the bitmap file to conceal the source.\n");
-	printf("To extract data from the source, name the target file \"ex\".\n");
-	printf("To bit slice the source, name the target file \"bs\".\n");
-	printf("The number of bits to hide or extract, range is (1 - 7).\n");
-	printf("If not specified, 1 bit is used as the default.\n\n");
+	printf("BPCS: Hiding Mode:\n");
+	printf("Usage: bpcs.exe -h 'source filename' 'target filename' ['threshold']\n\n");
+	printf("\tsource filename:\tThe name of the bitmap file to hide.\n");
+	printf("\ttarget filename:\tThe name of the bitmap file to conceal within the source.\n");
+	printf("\tthreshold:\t\tThe number of bits to hide, range is (.3 - .5).\n");
+	printf("\t\tIf not specified .3 bits will be used as the default.\n\n");
 	return;
-} // printHelp
+} // printHelpHide
 
   // prints help extract message to the screen
 void printHelpExtract()
 {
-	printf("Steg_BPSC: Extracting Mode:\n");
-	printf("Usage: Steg_BPSC -e 'stego filename' ['threshold']\n\n");
+	printf("BPCS: Extracting Mode:\n");
+	printf("Usage: bpcs.exe -e 'stego filename' ['threshold']\n\n");
 	printf("\tstego filename:\t\tThe name of the file in which a bitmap may be hidden.\n");
-	printf("\tthreshold:\t\tThe number of bits to hide, range is (1 - 7).\n");
-	printf("\t\tIf not specified 1 bit will be used as the default.\n\n");
+	printf("\tthreshold:\t\tThe number of bits to hide, range is (.3 - .5).\n");
+	printf("\t\tIf not specified .3 bits will be used as the default.\n\n");
 	return;
 } // printHelpExtract
 
@@ -460,9 +460,9 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 void main(int argc, char *argv[])
 {
 
-	if (argc < 3 || argc > 4)
+	if (argc < 3 || argc > 5)
 	{
-		printHelp();
+		printHelpHide();
 		printHelpExtract();
 		return;
 	}
@@ -472,22 +472,18 @@ void main(int argc, char *argv[])
 	// if not specified, default to one
 	if ((strcmp(argv[1], "-h") == 0 && argc == 5) || (strcmp(argv[1], "-e") == 0 && argc == 4))
 	{
-		// the range for gNumLSB is 1 - 7;  if gNumLSB == 0, then the mask would be 0xFF and the
-		// shift value would be 8, leaving the target unmodified during embedding or extracting
-		// if gNumLSB == 8, then the source would completely replace the target
-
+		//assigns the threshold for hiding/extracting and assigns a default if not entered or invalid range
 		if (strcmp(argv[1], "-h") == 0)
-			gNumLSB = (unsigned char)argv[4];
+			alpha = atof(argv[4]);
 		else if (strcmp(argv[1], "-e") == 0)
-			gNumLSB = (unsigned char)argv[3];
+			alpha = atof(argv[3]);
 
-		if (gNumLSB < 1 || gNumLSB > 7)
+		if (alpha < .3 || alpha > .5)
 		{
-			gNumLSB = 1;
-			printf("The number specified for LSB was invalid, using the default value of '1'.\n\n");
+			alpha = .3;
+			printf("The number specified for Threshold was invalid, using the default value of '.3'.\n\n");
 		}
-		gMask = 256 - (int)pow(2, gNumLSB);
-		gShift = 8 - gNumLSB;
+
 	}
 	/* Format for hiding		argc
 	0	exe					1
@@ -498,7 +494,7 @@ void main(int argc, char *argv[])
 	*/
 
 	// read the message file
-	pMsgFile = readFile(argv[2], &msgFileSize);
+	pMsgFile = readFile(argv[3], &msgFileSize);
 	if (pMsgFile == NULL) return;
 
 	// Set up pointers to various parts of message file
@@ -514,7 +510,7 @@ void main(int argc, char *argv[])
 
 
 	// read the source file
-	pCoverFile = readFile(argv[1], &coverFileSize);
+	pCoverFile = readFile(argv[2], &coverFileSize);
 	if (pCoverFile == NULL) return;
 
 	// Set up pointers to various parts of the source file
@@ -528,7 +524,7 @@ void main(int argc, char *argv[])
 	pCoverData = pCoverFile + pCoverFileHdr->bfOffBits;
 
 	pCoverBlock = pCoverData;
-	printf("Size of file: %ld\n", pCoverFileHdr->bfSize);
+	printf("Size of file in bytes: %ld\n", pCoverFileHdr->bfSize);
 
 	int sizeOfCoverData = pCoverFileHdr->bfSize - pCoverFileHdr->bfOffBits;
 	int iterateCover = sizeOfCoverData - (sizeOfCoverData % 8);
@@ -576,7 +572,7 @@ void main(int argc, char *argv[])
 		}
 		pCoverBlock = pCoverBlock + 8;
 		n = n + 8;
-		printf("Iteration: %d, Size of cover: %d\n", n, sizeOfCoverData);
+		printf("Iteration: %d, Size of cover in bytes: %d\n", n, sizeOfCoverData);
 	}
 
 	//for debugging purposes, show file info on the screen

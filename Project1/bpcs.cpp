@@ -252,17 +252,7 @@ float convertToCGC(unsigned char array_bits[blockSize][bitBlockSize]) {
 			toCGC[n][p] = array_bits[n][p] ^ array_bits[n][p - 1];
 		}
 	}
-
-	//print out CGC
-	//printf("Print CGC of 8x8 block\n");
-	//for (n = 0; n < 8; n++) {
-	//	for (p = 0; p < 8; p++) {
-	//		printf("%d-", toCGC[n][p]);
-	//	}
-	//	printf("\n");
-	//}
 	printf("\n");
-
 	return calcComplexity(toCGC);
 }
 
@@ -271,12 +261,9 @@ float getBlockBits(unsigned char *pData, int charsToGet, int flag) {
 	int i = 0, m = 0;
 	pTempBlock = pData;
 
-	//printf("Print PCB of (charsToGet)x8 block\n");
-
 	//change bytes to bits of (charsToGet)x8  I just grab sequentially.
 	for (; i < charsToGet; i++) {
 		unsigned char currentChar = *pTempBlock;
-
 		int k = 0;
 		for (; k < 8; k++) {
 			unsigned char x = currentChar;//clean copy of char to work with
@@ -291,10 +278,6 @@ float getBlockBits(unsigned char *pData, int charsToGet, int flag) {
 		pTempBlock++;
 		m++;
 	}
-
-	//get size of bit stream so i can copy it to its respective array
-	//the arrays will be used later, i think
-	size_t sizeOfArray = sizeof(temp_bits);
 
 	if (flag == 0) {
 		int j = 0;
@@ -387,6 +370,7 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 	}
 
 
+
 	printf("What the stego bit block looks like after embed:\n");
 	int i = 0;
 	for (i = 0; i < 8; i++) {
@@ -398,6 +382,25 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 	}
 	printf("\n");
 	printf("\n");
+
+	if (convertToCGC(stego_bits) == 0) {
+		//if the newly embedded block is not complex enough then we must conjugate it 
+		//to raise its complexity
+		printf("Stego block not complex enough\n");
+		int on = 1;
+		int off = 0;
+		int i = 0;
+		for (; i < 8; i++) {
+			int d = 0;
+			for(; d < 8; d++){
+				if (d % 2)
+					stego_bits[i][d] = stego_bits[i][d] ^ on;
+				else
+					stego_bits[i][d] = stego_bits[i][d] ^ off;
+
+			}
+		}
+	}
 
 	printf("Writing the following to Stegofile in heap\n");
 	int sum = 0;
@@ -533,9 +536,9 @@ void main(int argc, char *argv[])
 		//for testing I changed size of loop to 8. it should be variable iterateCover
 		for (; n < 8;) {
 
-			//set flag to let getBlockBits func know to grab bits from cover 
+			//set flag to 0 to let getBlockBits func know to grab bits from cover then
 			//convert to CGC and calc coplexity
-			blockFlag = 0;
+			blockFlag = 0;		//this flag is used to tell getBlockBits whether to get 
 
 			//if block complex enuff then embed from here
 			//because we still on the block we working on

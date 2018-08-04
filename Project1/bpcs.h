@@ -51,3 +51,4 @@ BYTE    rgbReserved;
 
 //*/
 
+void conjugate();

@@ -106,8 +106,6 @@ void displayFileInfo(char *pFileName,
 		printf("R:%02x   G:%02x   B:%02x\n", pCT->rgbRed, pCT->rgbGreen, pCT->rgbBlue);
 		pCT++;
 	}
-	//*/
-
 	return;
 } // displayFileInfo
 
@@ -191,7 +189,7 @@ int writeFile(unsigned char *pFile, int fileSize, int flag)
 	return(SUCCESS);
 } // writeFile
 
-  // prints help message to the screen
+// prints help message to the screen
 void printHelpHide()
 {
 	printf("BPCS: Hiding Mode:\n");
@@ -204,7 +202,7 @@ void printHelpHide()
 	return;
 } // printHelpHide
 
-  // prints help extract message to the screen
+// prints help extract message to the screen
 void printHelpExtract()
 {
 	printf("BPCS: Extracting Mode:\n");
@@ -236,7 +234,6 @@ float calcComplexity(unsigned char toCGC[bitBlockSize][bitBlockSize]) {
 		}
 	}
 	//printf("Vertical change count is: %d\n", vertChangeCount);
-
 	if ((((float)vertChangeCount / 56.00)> alpha) && (((float)horizChangeCount / 56.00)> alpha)) {
 		return 1;
 	}
@@ -255,17 +252,7 @@ float convertToCGC(unsigned char array_bits[blockSize][bitBlockSize]) {
 			toCGC[n][p] = array_bits[n][p] ^ array_bits[n][p - 1];
 		}
 	}
-
-	//print out CGC
-	//printf("Print CGC of 8x8 block\n");
-	//for (n = 0; n < 8; n++) {
-	//	for (p = 0; p < 8; p++) {
-	//		printf("%d-", toCGC[n][p]);
-	//	}
-	//	printf("\n");
-	//}
 	printf("\n");
-
 	return calcComplexity(toCGC);
 }
 
@@ -273,8 +260,6 @@ float convertToCGC(unsigned char array_bits[blockSize][bitBlockSize]) {
 float getBlockBits(unsigned char *pData, int charsToGet, int flag) {
 	int i = 0, m = 0;
 	pTempBlock = pData;
-
-	//printf("Print PCB of (charsToGet)x8 block\n");
 
 	//change bytes to bits of (charsToGet)x8  I just grab sequentially.
 	for (; i < charsToGet; i++) {
@@ -402,25 +387,6 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 	printf("\n");
 	printf("\n");
 
-
-	std::map<std::string, std::string> mapOfHexValues;
-	mapOfHexValues.insert(std::make_pair("0000", "0"));
-	mapOfHexValues.insert(std::make_pair("0001", "1"));
-	mapOfHexValues.insert(std::make_pair("0010", "2"));
-	mapOfHexValues.insert(std::make_pair("0011", "3"));
-	mapOfHexValues.insert(std::make_pair("0100", "4"));
-	mapOfHexValues.insert(std::make_pair("0101", "5"));
-	mapOfHexValues.insert(std::make_pair("0110", "6"));
-	mapOfHexValues.insert(std::make_pair("0111", "7"));
-	mapOfHexValues.insert(std::make_pair("1000", "8"));
-	mapOfHexValues.insert(std::make_pair("1001", "9"));
-	mapOfHexValues.insert(std::make_pair("1010", "A"));
-	mapOfHexValues.insert(std::make_pair("1011", "B"));
-	mapOfHexValues.insert(std::make_pair("1100", "C"));
-	mapOfHexValues.insert(std::make_pair("1101", "D"));
-	mapOfHexValues.insert(std::make_pair("1110", "E"));
-	mapOfHexValues.insert(std::make_pair("1111", "F"));
-
 	printf("Writing the following to Stegofile in heap\n");
 	int sum = 0;
 	for (i = 0; i < 8; i++) {
@@ -434,26 +400,6 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 		*pStegoBlockIterate = sum;
 		printf("Value: %x, Address: %p\n", *pStegoBlockIterate, (void *)pStegoBlockIterate);
 		pStegoBlockIterate++;
-		//sprintf(c1, "%d%d%d%d", stego_bits[i][0], stego_bits[i][1], stego_bits[i][2], stego_bits[i][3]);
-		//sprintf(c2, "%d%d%d%d", stego_bits[i][4], stego_bits[i][5], stego_bits[i][6], stego_bits[i][7]);
-		//std::map<std::string, std::string>::iterator it;
-		//
-		//it = mapOfHexValues.find(c1);
-		//if (it == mapOfHexValues.end()) {
-		//	printf("value not found\n");
-		//}
-
-		//it = mapOfHexValues.find(c2);
-		//if (it == mapOfHexValues.end()) {
-		//	printf("value not found\n");
-		//}
-
-		//std::string str1 = mapOfHexValues.find(c1)->second + mapOfHexValues.find(c2)->second;
-		//std::cout << str1 << std::endl;
-		////*pMsgBlockIterate = ( char)str1.c_str();
-		//*pStegoBlockIterate = (unsigned char)'BA';
-
-
 	}
 	
 	printf("\n");

@@ -192,11 +192,12 @@ int writeFile(unsigned char *pFile, int fileSize, char *fileName)
 void printHelpHide()
 {
 	printf("BPCS: Hiding Mode:\n");
-	printf("Usage: bpcs.exe -h 'source filename' 'target filename' ['threshold']\n\n");
+	printf("Usage: bpcs.exe -h 'source filename' 'target filename' ['threshold'] [bit slice]\n\n");
 	printf("\tsource filename:\tThe name of the bitmap file to hide.\n");
 	printf("\ttarget filename:\tThe name of the bitmap file to conceal within the source.\n");
 	printf("\tthreshold:\t\tThe number of bits to hide, range is (.3 - .5).\n");
-	printf("\t\tIf not specified .3 bits will be used as the default.\n\n");
+	printf("The bit slice is the number of bits to hide or extract, range is (1 - 7).\n");
+	printf("\t\tIf threshold specified is out of bounds .3 bits will be used as the default.\n\n");
 	return;
 } // printHelpHide
 
@@ -204,10 +205,11 @@ void printHelpHide()
 void printHelpExtract()
 {
 	printf("BPCS: Extracting Mode:\n");
-	printf("Usage: bpcs.exe -e 'stego filename' ['threshold']\n\n");
+	printf("Usage: bpcs.exe -e 'stego filename' ['threshold'] [bit slice]\n\n");
 	printf("\tstego filename:\t\tThe name of the file in which a bitmap may be hidden.\n");
 	printf("\tthreshold:\t\tThe number of bits to hide, range is (.3 - .5).\n");
-	printf("\t\tIf not specified .3 bits will be used as the default.\n\n");
+	printf("The bit slice is the number of bits to hide or extract, range is (1 - 7).\n");
+	printf("\t\tIf threshold specified is out of bounds .3 bits will be used as the default.\n\n");
 	return;
 } // printHelpExtract
 
@@ -323,7 +325,7 @@ float getBlockBits(unsigned char *pData, int charsToGet, int flag) {
 
 
 void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
-	int bitPlane = 4;
+	int bitPlane = gNumLSB;
 	blockFlag = 1;
 
 	unsigned char *pMsgBlockBit;
@@ -460,7 +462,7 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 void main(int argc, char *argv[])
 {
 
-	if (argc < 3 || argc > 5)
+	if (argc < 3 || argc > 6)
 	{
 		printHelpHide();
 		printHelpExtract();
@@ -470,7 +472,7 @@ void main(int argc, char *argv[])
 	//Roberts CODE;
 	// get the number of bits to use for data hiding or data extracting
 	// if not specified, default to one
-	if ((strcmp(argv[1], "-h") == 0 && argc == 5) || (strcmp(argv[1], "-e") == 0 && argc == 4))
+	if ((strcmp(argv[1], "-h") == 0 && argc == 6) || (strcmp(argv[1], "-e") == 0 && argc == 5))
 	{
 		//assigns the threshold for hiding/extracting and assigns a default if not entered or invalid range
 		if (strcmp(argv[1], "-h") == 0)
@@ -483,7 +485,19 @@ void main(int argc, char *argv[])
 			alpha = .3;
 			printf("The number specified for Threshold was invalid, using the default value of '.3'.\n\n");
 		}
-
+		//assigns the gNumLSB
+		// the range for gNumLSB is 1 - 7;  if gNumLSB == 0, then the mask would be 0xFF and the
+		// shift value would be 8, leaving the target unmodified during embedding or extracting
+		//if gNumLSB == 8, then the source would completely replace the target
+		
+		//takes the user input and converts from hex to integer value
+		gNumLSB = *(argv[5]) - 48;
+		printf("The value of gNumLSB is: %d\n", gNumLSB);
+		if(gNumLSB < 1 || gNumLSB > 7)
+		{
+			gNumLSB = 1;
+			printf("The number specified for LSB was invalid, using the default value of '1'.\n\n");
+		}
 	}
 	/* Format for hiding		argc
 	0	exe					1
@@ -491,6 +505,7 @@ void main(int argc, char *argv[])
 	2	cover file			3
 	3	message file		4
 	4	threshold			5
+	5    gNumLSB			6
 	*/
 
 	// read the message file

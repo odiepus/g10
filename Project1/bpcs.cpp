@@ -399,25 +399,6 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 	printf("\n");
 	printf("\n");
 
-
-	std::map<std::string, std::string> mapOfHexValues;
-	mapOfHexValues.insert(std::make_pair("0000", "0"));
-	mapOfHexValues.insert(std::make_pair("0001", "1"));
-	mapOfHexValues.insert(std::make_pair("0010", "2"));
-	mapOfHexValues.insert(std::make_pair("0011", "3"));
-	mapOfHexValues.insert(std::make_pair("0100", "4"));
-	mapOfHexValues.insert(std::make_pair("0101", "5"));
-	mapOfHexValues.insert(std::make_pair("0110", "6"));
-	mapOfHexValues.insert(std::make_pair("0111", "7"));
-	mapOfHexValues.insert(std::make_pair("1000", "8"));
-	mapOfHexValues.insert(std::make_pair("1001", "9"));
-	mapOfHexValues.insert(std::make_pair("1010", "A"));
-	mapOfHexValues.insert(std::make_pair("1011", "B"));
-	mapOfHexValues.insert(std::make_pair("1100", "C"));
-	mapOfHexValues.insert(std::make_pair("1101", "D"));
-	mapOfHexValues.insert(std::make_pair("1110", "E"));
-	mapOfHexValues.insert(std::make_pair("1111", "F"));
-
 	printf("Writing the following to Stegofile in heap\n");
 	int sum = 0;
 	for (i = 0; i < 8; i++) {
@@ -431,26 +412,6 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 		*pStegoBlockIterate = sum;
 		printf("Value: %x, Address: %p\n", *pStegoBlockIterate, (void *)pStegoBlockIterate);
 		pStegoBlockIterate++;
-		//sprintf(c1, "%d%d%d%d", stego_bits[i][0], stego_bits[i][1], stego_bits[i][2], stego_bits[i][3]);
-		//sprintf(c2, "%d%d%d%d", stego_bits[i][4], stego_bits[i][5], stego_bits[i][6], stego_bits[i][7]);
-		//std::map<std::string, std::string>::iterator it;
-		//
-		//it = mapOfHexValues.find(c1);
-		//if (it == mapOfHexValues.end()) {
-		//	printf("value not found\n");
-		//}
-
-		//it = mapOfHexValues.find(c2);
-		//if (it == mapOfHexValues.end()) {
-		//	printf("value not found\n");
-		//}
-
-		//std::string str1 = mapOfHexValues.find(c1)->second + mapOfHexValues.find(c2)->second;
-		//std::cout << str1 << std::endl;
-		////*pMsgBlockIterate = ( char)str1.c_str();
-		//*pStegoBlockIterate = (unsigned char)'BA';
-
-
 	}
 	
 	printf("\n");
@@ -563,31 +524,33 @@ void main(int argc, char *argv[])
 	*pStegoData = 40;
 	printf("Value: %ld, Address: %p\n", *pStegoData, (void *)pStegoData);
 
-	/*Here is where I start the loop for grabbing bits and checking for complexity and
-	embed if complex enough. I move the cover data pointer every 8 chars for each iteration.
-	The message data pointer should move every bitplane for every iteration and the stego data pointer 
-	should move every 8 chars for every iteration. */
-	int n = 0;
-	//for testing I changed size of loop to 8. it should be variable iterateCover
-	for (; n < 8;) {
+	if (strcmp(argv[1], "-h") == 0) {
+		/*Here is where I start the loop for grabbing bits and checking for complexity and
+		embed if complex enough. I move the cover data pointer every 8 chars for each iteration.
+		The message data pointer should move every bitplane for every iteration and the stego data pointer
+		should move every 8 chars for every iteration. */
+		int n = 0;
+		//for testing I changed size of loop to 8. it should be variable iterateCover
+		for (; n < 8;) {
 
-		//set flag to let getBlockBits func know to grab bits from cover 
-		//convert to CGC and calc coplexity
-		blockFlag = 0;
+			//set flag to let getBlockBits func know to grab bits from cover 
+			//convert to CGC and calc coplexity
+			blockFlag = 0;
 
-		//if block complex enuff then embed from here
-		//because we still on the block we working on
-		if (getBlockBits(pCoverBlock, blockSize, blockFlag)) {
-			printf("Complex enough!!!!\n\n");
-			embed(pMsgData, pStegoData);
+			//if block complex enuff then embed from here
+			//because we still on the block we working on
+			if (getBlockBits(pCoverBlock, blockSize, blockFlag)) {
+				printf("Complex enough!!!!\n\n");
+				embed(pMsgData, pStegoData);
+			}
+			//if block not complex enuff then move on to next block
+			else {
+				printf("Not complex enough!!!!\n\n");
+			}
+			pCoverBlock = pCoverBlock + 8;
+			n = n + 8;
+			printf("Iteration: %d, Size of cover in bytes: %d\n", n, sizeOfCoverData);
 		}
-		//if block not complex enuff then move on to next block
-		else {
-			printf("Not complex enough!!!!\n\n");
-		}
-		pCoverBlock = pCoverBlock + 8;
-		n = n + 8;
-		printf("Iteration: %d, Size of cover in bytes: %d\n", n, sizeOfCoverData);
 	}
 
 	//for debugging purposes, show file info on the screen

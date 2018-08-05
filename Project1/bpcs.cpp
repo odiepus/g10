@@ -284,6 +284,7 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 	//I save the last bit from last block into the first bit of this block. 
 	//This is because the last bit in the last block has to hold the conjugation bit
 	//thus every block has a last bit of bitplane saved for use to denote conjugation
+	//default is zero if on the very first iteration thus wasted space
 	stego_bits[0][7] = lastBit;
 
 	f = 0;

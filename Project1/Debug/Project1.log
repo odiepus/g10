@@ -1,8 +1,8 @@
 ﻿  bpcs.cpp
-c:\users\guak\source\repos\project1\project1\bpcs.cpp(35): warning C4305: 'initializing': truncation from 'double' to 'float'
-c:\users\guak\source\repos\project1\project1\bpcs.cpp(428): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
-c:\users\guak\source\repos\project1\project1\bpcs.cpp(444): warning C4326: return type of 'main' should be 'int' instead of 'void'
-c:\users\guak\source\repos\project1\project1\bpcs.cpp(460): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-c:\users\guak\source\repos\project1\project1\bpcs.cpp(462): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-c:\users\guak\source\repos\project1\project1\bpcs.cpp(466): warning C4305: '=': truncation from 'double' to 'float'
-  Project1.vcxproj -> C:\Users\guak\source\repos\Project1\Debug\Project1.exe
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(35): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(348): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(364): warning C4326: return type of 'main' should be 'int' instead of 'void'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(380): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(382): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(386): warning C4305: '=': truncation from 'double' to 'float'
+  Project1.vcxproj -> C:\Users\odiep\source\repos\g10\Debug\Project1.exe

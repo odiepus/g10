@@ -1,18 +1,8 @@
 ﻿  bpcs.cpp
-<<<<<<< HEAD
-c:\users\robert\source\repos\g10\project1\bpcs.cpp(35): warning C4305: 'initializing': truncation from 'double' to 'float'
-c:\users\robert\source\repos\g10\project1\bpcs.cpp(396): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
-c:\users\robert\source\repos\g10\project1\bpcs.cpp(412): warning C4326: return type of 'main' should be 'int' instead of 'void'
-c:\users\robert\source\repos\g10\project1\bpcs.cpp(429): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-c:\users\robert\source\repos\g10\project1\bpcs.cpp(433): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-c:\users\robert\source\repos\g10\project1\bpcs.cpp(438): warning C4305: '=': truncation from 'double' to 'float'
-  Project1.vcxproj -> C:\Users\Robert\source\repos\g10\Debug\Project1.exe
-=======
 c:\users\odiep\source\repos\g10\project1\bpcs.cpp(35): warning C4305: 'initializing': truncation from 'double' to 'float'
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(348): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(364): warning C4326: return type of 'main' should be 'int' instead of 'void'
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(380): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(382): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(386): warning C4305: '=': truncation from 'double' to 'float'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(350): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(366): warning C4326: return type of 'main' should be 'int' instead of 'void'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(384): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(388): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(393): warning C4305: '=': truncation from 'double' to 'float'
   Project1.vcxproj -> C:\Users\odiep\source\repos\g10\Debug\Project1.exe
->>>>>>> hector

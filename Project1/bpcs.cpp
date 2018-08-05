@@ -232,7 +232,6 @@ void conjugateBits(unsigned char bits[blockSize][bitBlockSize])
 
 void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 	int bitPlane = gNumLSB;
-	blockFlag = 1;
 
 	unsigned char *pMsgBlockBit;
 	pMsgBlockBit = pMsgBlock;
@@ -251,6 +250,12 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 	//copy from temp_bits array that getBlockBits populated to message_bits array for further use
 	//and to prevent confusion later on
 	memcpy(message_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize);
+
+	if (convertToCGC(message_bits) == 0) {
+		conjugateBits(message_bits);
+		stego_bits[7][bitPlane - 1] = 1; //set the bit modifier to denote conjugation
+	}
+	else stego_bits[7][bitPlane - 1] = 0; //set the bit modifier to denote non-conjucation
 
 	//copy cover bits to stego bits so we can get ready to embed
 	memcpy(stego_bits, cover_bits, sizeof(unsigned char) * blockSize * bitBlockSize);
@@ -288,10 +293,13 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 	//default is zero if on the very first iteration thus wasted space
 	stego_bits[0][7] = lastBit;
 
-	f = 0;
-	int g = 7, h = 1;
+	f = 0;	//use this it iterate thru linear array of messagebits; will be used to stop at correct iteratation
 
-	//starting at the LSB bit plane start embeding and stop at the defined bit plane
+	//g starts at 7 because LSB starts at index 7. h starts at 1 because the initial bit of all blocks is reserved 
+	//for lastbit of last block iteration
+	int g = 7, h = 1;	
+
+	//EMBEDDING: starting at the LSB bit plane start embeding and stop at the defined bit plane
 	//because in earlier part of code I save msb at index 0 of arrays I have to 
 	//start embedding at index 7 of these arrays to embed at LSB
 	while (f < ((bitPlane * 8) - 1)) {
@@ -322,14 +330,6 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 	printf("\n");
 	printf("\n");
 	
-
-	//NOTE:: the last bit in the block only matters for conjugation purposes
-	if (convertToCGC(stego_bits) == 0) {
-		conjugateBits(stego_bits);
-		stego_bits[7][bitPlane - 1] = 1;
-	}
-	else stego_bits[7][bitPlane - 1] = 0;
-
 	printf("What the stego bit block looks like after conjugation:\n");
 	for (i = 0; i < 8; i++) {
 		int d = 0;
@@ -342,7 +342,7 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 	printf("\n");
 
 	printf("Writing the following to Stegofile in heap\n");
-	int sum = 0;
+	double sum = 0;
 	for (i = 0; i < 8; i++) {
 		int d = 0, sum = 0;
 		for (; d < 8; d++) {
@@ -366,6 +366,7 @@ void main(int argc, char *argv[])
 {
 	//flag for the switches -h(1) or -e(0) 
 	int flag = 0;
+
 	if (argc < 3 || argc > 6)
 	{
 		printHelpHide();
@@ -458,7 +459,7 @@ void main(int argc, char *argv[])
 		int n = 0;
 		//for TESTING I changed size of loop to 8. it should be variable iterateCover
 		//get block of bits to work on for this iteration(8 chars per block for cover)
-		for (; n < (8 * 5);) {
+		for (; n < iterateCover;) {
 			getBlockBits(pCoverBlock, blockSize);	//bits saved to global temp_bits array
 			memcpy(cover_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize); //copy from populated temp_bits to cover_bits
 			embed(pMsgData, pStegoData); //this func will grab bits embed message and check for complexity. will conjugate if necessary
@@ -470,6 +471,10 @@ void main(int argc, char *argv[])
 			pCoverBlock += 8;
 			n = n + 8;
 			printf("Iteration: %d, Size of cover in bytes: %d\n", n / 8, sizeOfCoverData);
+			if (pMsgData > pMsgFileHdr->bfSize + pMsgFile) {
+				printf("Reached end of message file\n");
+				break;
+			}
 		}
 	}
 	else {
@@ -477,10 +482,9 @@ void main(int argc, char *argv[])
 	}
 
 	// write the file to disk
-	//if(flag == 1)
-	//	writeFile(pStegoFile, pStegoFileHdr->bfSize, flag);
-	//elseif(flag == 0)
-	//	writeFile(extractedFile, extractedFile->bfSize, flag);
+	if(flag == 1)
+		writeFile(pStegoFile, pStegoFileHdr->bfSize, flag);
+		//writeFile(extractedFile, extractedFile->bfSize, flag);
 
 
 

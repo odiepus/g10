@@ -17,7 +17,7 @@ BITMAPFILEHEADER *pCoverFileHdr, *pMsgFileHdr, *pStegoFileHdr;
 BITMAPINFOHEADER *pCoverInfoHdr, *pMsgInfoHdr, *pStegoInfoHdr;
 RGBQUAD *pSrcColorTable, *pTgtColorTable;
 unsigned char *pCoverFile, *pMsgFile, *pStegoFile, *pCoverData, *pMsgData, *pStegoData, *pCoverBlock, *pMsgBlock, *pStegoBlock;
-int coverFileSize, msgFileSize, blockNum;
+int coverFileSize, msgFileSize, blockNum, lastBit = 0;
 
 const int bitBlockSize = 8;
 const int blockSize = 8;
@@ -39,75 +39,6 @@ float blockComplex = 0.0;
 // default values
 unsigned char gNumLSB = 1, gMask = 0xfe, gShift = 7;
 
-// Show the various bitmap header bytes primarily for debugging
-void displayFileInfo(char *pFileName,
-	BITMAPFILEHEADER *pFileHdr,
-	BITMAPINFOHEADER *pFileInfo,
-	RGBQUAD *pColorTable,
-	unsigned char *pData)
-{
-	// first two characters in bitmap file should be "BM"
-	char *pp = (char *) &(pFileHdr->bfType);
-	int numColors, i;
-	RGBQUAD *pCT = pColorTable;
-
-	printf("\nFile Info for %s: \n\n", pFileName);
-
-	printf("File Header Info:\n");
-	printf("File Type: %c%c\nFile Size:%d\nData Offset:%d\n\n",
-		*pp, *(pp + 1), pFileHdr->bfSize, pFileHdr->bfOffBits);
-
-	switch (pFileInfo->biBitCount)
-	{
-	case 1:
-		numColors = 2;
-		break;
-	case 4:
-		numColors = 16;
-		break;
-	case 8:
-		numColors = 256;
-		break;
-	case 16:
-		numColors = 65536;
-		break;
-	case 24:
-		numColors = 16777216;
-		break;
-	default:
-		numColors = 16777216;
-	}
-
-	printf("Bit Map Image Info:\n\nSize:%d\nWidth:%d\nHeight:%d\nPlanes:%d\n"
-		"Bits/Pixel:%d ==> %d colors\n"
-		"Compression:%d\nImage Size:%d\nRes X:%d\nRes Y:%d\nColors:%d\nImportant Colors:%d\n\n",
-		pFileInfo->biSize,
-		pFileInfo->biWidth,
-		pFileInfo->biHeight,
-		pFileInfo->biPlanes,
-		pFileInfo->biBitCount, numColors,
-		pFileInfo->biCompression,
-		pFileInfo->biSizeImage,
-		pFileInfo->biXPelsPerMeter,
-		pFileInfo->biYPelsPerMeter,
-		pFileInfo->biClrUsed,
-		pFileInfo->biClrImportant);
-
-	//* Display Color Tables if Desired
-
-	//	There are no color tables
-	if (pFileInfo->biBitCount > 16) return;
-
-	//	only needed for debugging
-	printf("Color Table:\n\n");
-
-	for (i = 0; i < numColors; i++)
-	{
-		printf("R:%02x   G:%02x   B:%02x\n", pCT->rgbRed, pCT->rgbGreen, pCT->rgbBlue);
-		pCT++;
-	}
-	return;
-} // displayFileInfo
 
   // reads specified bitmap file from disk
 unsigned char *readFile(char *fileName, int *fileSize)
@@ -257,14 +188,13 @@ float convertToCGC(unsigned char array_bits[blockSize][bitBlockSize]) {
 }
 
 //get 8x8 block and convert to bits
-float getBlockBits(unsigned char *pData, int charsToGet, int flag) {
+void getBlockBits(unsigned char *pData, int charsToGet) {
 	int i = 0, m = 0;
 	pTempBlock = pData;
 
 	//change bytes to bits of (charsToGet)x8  I just grab sequentially.
 	for (; i < charsToGet; i++) {
 		unsigned char currentChar = *pTempBlock;
-
 		int k = 0;
 		for (; k < 8; k++) {
 			unsigned char x = currentChar;//clean copy of char to work with
@@ -279,38 +209,26 @@ float getBlockBits(unsigned char *pData, int charsToGet, int flag) {
 		pTempBlock++;
 		m++;
 	}
-
-	//get size of bit stream so i can copy it to its respective array
-	//the arrays will be used later, i think
-	size_t sizeOfArray = sizeof(temp_bits);
-
-	if (flag == 0) {
-		int j = 0;
-		for (; j < charsToGet; j++) {
-			int k = 0;
-			for (; k < bitBlockSize; k++) {
-				cover_bits[j][k] = temp_bits[j][k];
-			}
-		}
-	}
-	else {
-		int j = 0;
-		for (; j < blockSize; j++) {
-			int k = 0;
-			for (; k < bitBlockSize; k++) {
-				message_bits[j][k] = temp_bits[j][k];
-			}
-		}
-	}
-
-	if (flag == 0) {
-		return convertToCGC(temp_bits);
-	}
-	else {
-		return 0;
-	}
 }
 
+
+void conjugateBits(unsigned char bits[blockSize][bitBlockSize])
+{
+	//if the newly embedded block is not complex enough then we must conjugate it 
+	//to raise its complexity
+	printf("Stego block not complex enough\n\n");
+	int i = 0;
+	for (; i < 8; i++) {
+		int d = 0;
+		for (; d < 8; d++) {
+			if (d % 2)
+				stego_bits[i][d] = stego_bits[i][d] ^ 1;
+			else
+				stego_bits[i][d] = stego_bits[i][d] ^ 0;
+
+		}
+	}
+}
 
 void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 	int bitPlane = gNumLSB;
@@ -328,19 +246,23 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 	suppose bitplane is 4. then we would only want to embed 4*8bits = 32 totals bits to embed.
 	thus when i return the message_bits array will have all the bits I need to embed into
 	the cover bits in a new array stego_bits.*/
-	getBlockBits(pMsgBlockBit, bitPlane, blockFlag);
-	printf("Want to embed into this:\n");
+	getBlockBits(pMsgBlockBit, bitPlane);
 
-	//copy cover bits to stego bits 
+	//copy from temp_bits array that getBlockBits populated to message_bits array for further use
+	//and to prevent confusion later on
+	memcpy(message_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize);
+
+	//copy cover bits to stego bits so we can get ready to embed
+	memcpy(stego_bits, cover_bits, sizeof(unsigned char) * blockSize * bitBlockSize);
+
+	printf("Want to embed into this:\n");
 	int c = 0;
 	for (; c < blockSize; c++) {
 		int d = 0;
 		for (; d < bitBlockSize; d++) {
-			stego_bits[c][d] = cover_bits[c][d];
 			printf("%d-", stego_bits[c][d]);
 		}
 		printf("\n");
-
 	}
 
 	printf("\nMessage stream I will embed into stego bit block\n");
@@ -355,28 +277,60 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 			printf("%d", temp_array[f]);
 			f++;
 		}
+		printf("\n");
 	}
 	printf("\n");
 	printf("\n");
 
+	//I save the last bit from last block into the first bit of this block. 
+	//This is because the last bit in the last block has to hold the conjugation bit
+	//thus every block has a last bit of bitplane saved for use to denote conjugation
+	//default is zero if on the very first iteration thus wasted space
+	stego_bits[0][7] = lastBit;
+
 	f = 0;
-	int g = 7, h = 0;
+	int g = 7, h = 1;
+
 	//starting at the LSB bit plane start embeding and stop at the defined bit plane
 	//because in earlier part of code I save msb at index 0 of arrays I have to 
 	//start embedding at index 7 of these arrays to embed at LSB
-	while (f < bitPlane * 8) {
+	while (f < ((bitPlane * 8) - 1)) {
 		for(h = 0; h <bitBlockSize; h++){
-			//printf("g: %d, h: %d, f: %d\n", g, h, f);
+
+			//because I saved the last bit from last block into first bit of this block
+			//I must shift the saving of bits by one position forward. The last bit will 
+			//be saved and put in the next blocks first bit position
+			if (f == 0) h = 1;		
 			stego_bits[h][g] = temp_array[f];
 			f++;
 		}
 		g--;
 		if (g < 0) g = 7;
 	}
-
+	printf("f is: %d\n\n", f);
+	lastBit = temp_array[f];
 
 	printf("What the stego bit block looks like after embed:\n");
 	int i = 0;
+	for (i = 0; i < 8; i++) {
+		int d = 0;
+		for (; d < 8; d++) {
+			printf("%d-", stego_bits[i][d]);
+		}
+		printf("\n");
+	}
+	printf("\n");
+	printf("\n");
+	
+
+	//NOTE:: the last bit in the block only matters for conjugation purposes
+	if (convertToCGC(stego_bits) == 0) {
+		conjugateBits(stego_bits);
+		stego_bits[7][bitPlane - 1] = 1;
+	}
+	else stego_bits[7][bitPlane - 1] = 0;
+
+	printf("What the stego bit block looks like after conjugation:\n");
 	for (i = 0; i < 8; i++) {
 		int d = 0;
 		for (; d < 8; d++) {
@@ -398,7 +352,7 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock) {
 		}
 
 		*pStegoBlockIterate = sum;
-		printf("Value: %x, Address: %p\n", *pStegoBlockIterate, (void *)pStegoBlockIterate);
+		printf("After write, value: %x, Address: %p\n", *pStegoBlockIterate, (void *)pStegoBlockIterate);
 		pStegoBlockIterate++;
 	}
 	
@@ -445,110 +399,82 @@ void main(int argc, char *argv[])
 		
 		//takes the user input and converts from hex to integer value
 		gNumLSB = *(argv[5]) - 48;
-		printf("The value of gNumLSB is: %d\n", gNumLSB);
 		if(gNumLSB < 1 || gNumLSB > 7)
 		{
 			gNumLSB = 1;
 			printf("The number specified for LSB was invalid, using the default value of '1'.\n\n");
 		}
 	}
-	printf("The flag is set to: %c\n", flag);
-	/* Format for hiding		argc
-	0	exe					1
-	1	-h					2
-	2	cover file			3
-	3	message file		4
-	4	threshold			5
-	5    gNumLSB			6
-	*/
 
-	// read the message file
-	pMsgFile = readFile(argv[3], &msgFileSize);
-	if (pMsgFile == NULL) return;
+	if (strcmp(argv[1], "-h") == 0) {
+		// read the message file
+		pMsgFile = readFile(argv[3], &msgFileSize);
+		if (pMsgFile == NULL) return;
 
-	// Set up pointers to various parts of message file
-	pMsgFileHdr = (BITMAPFILEHEADER *)pMsgFile;
-	pMsgInfoHdr = (BITMAPINFOHEADER *)(pMsgFile + sizeof(BITMAPFILEHEADER));
-	pTgtColorTable = (RGBQUAD *)(pMsgFile + sizeof(BITMAPFILEHEADER) + pMsgInfoHdr->biSize);
+		// Set up pointers to various parts of message file
+		pMsgFileHdr = (BITMAPFILEHEADER *)pMsgFile;
+		pMsgInfoHdr = (BITMAPINFOHEADER *)(pMsgFile + sizeof(BITMAPFILEHEADER));
+		pTgtColorTable = (RGBQUAD *)(pMsgFile + sizeof(BITMAPFILEHEADER) + pMsgInfoHdr->biSize);
 
-	//pointer to start of data in the message file
-	//will be used to grab bits and embed into cover.
-	pMsgData = pMsgFile + pMsgFileHdr->bfOffBits;
+		//pointer to start of data in the message file
+		//will be used to grab bits and embed into cover.
+		pMsgData = pMsgFile + pMsgFileHdr->bfOffBits;
 
-	int sizeOfMsgData = pMsgFileHdr->bfSize - pMsgFileHdr->bfOffBits;
+		int sizeOfMsgData = pMsgFileHdr->bfSize - pMsgFileHdr->bfOffBits;
 
+		// read the source file
+		pCoverFile = readFile(argv[2], &coverFileSize);
+		if (pCoverFile == NULL) return;
 
-	// read the source file
-	pCoverFile = readFile(argv[2], &coverFileSize);
-	if (pCoverFile == NULL) return;
+		// Set up pointers to various parts of the source file
+		pCoverFileHdr = (BITMAPFILEHEADER *)pCoverFile;
+		pCoverInfoHdr = (BITMAPINFOHEADER *)(pCoverFile + sizeof(BITMAPFILEHEADER));
 
-	// Set up pointers to various parts of the source file
-	pCoverFileHdr = (BITMAPFILEHEADER *)pCoverFile;
-	pCoverInfoHdr = (BITMAPINFOHEADER *)(pCoverFile + sizeof(BITMAPFILEHEADER));
+		// file header indicates where image data begins
+		pCoverData = pCoverFile + pCoverFileHdr->bfOffBits;
 
-	// pointer to first RGB color palette, follows file header and bitmap header
-	pSrcColorTable = (RGBQUAD *)(pCoverFile + sizeof(BITMAPFILEHEADER) + pCoverInfoHdr->biSize);
+		pCoverBlock = pCoverData;
+		printf("Size of file in bytes: %ld\n", pCoverFileHdr->bfSize);
 
-	// file header indicates where image data begins
-	pCoverData = pCoverFile + pCoverFileHdr->bfOffBits;
+		int sizeOfCoverData = pCoverFileHdr->bfSize - pCoverFileHdr->bfOffBits;
+		int iterateCover = sizeOfCoverData - (sizeOfCoverData % 8);
 
-	pCoverBlock = pCoverData;
-	printf("Size of file in bytes: %ld\n", pCoverFileHdr->bfSize);
+		//create spcae in heap to hold the stego'ed output file data
+		pStegoFile = (unsigned char *)malloc(pCoverFileHdr->bfSize);
 
-	int sizeOfCoverData = pCoverFileHdr->bfSize - pCoverFileHdr->bfOffBits;
-	int iterateCover = sizeOfCoverData - (sizeOfCoverData % 8);
+		//copy entire cover file into a new heap space
+		//this will be our output where our secret message will be contained.
+		memcpy(pStegoFile, pCoverFile, coverFileSize);
 
-	//testing
-	//embed(pCoverBlock, pMsgData);
+		pStegoFileHdr = (BITMAPFILEHEADER *)pStegoFile;
+		pStegoInfoHdr = (BITMAPINFOHEADER *)(pStegoFile + sizeof(BITMAPFILEHEADER));
 
-	//create spcae in heap to hold the stego'ed output file data
-	pStegoFile = (unsigned char *)malloc(pCoverFileHdr->bfSize);
+		pStegoData = pStegoFile + pStegoFileHdr->bfOffBits;
+		/*Here is where I start the loop for grabbing bits and checking for complexity and
+		embed if complex enough. I move the cover data pointer every 8 chars for each iteration.
+		The message data pointer should move every bitplane for every iteration and the stego data pointer
+		should move every 8 chars for every iteration. */
 
-	//copy entire cover file into a new heap space
-	//this will be our output where our secret message will be contained.
-	memcpy(pStegoFile, pCoverFile, coverFileSize);
+		int n = 0;
+		//for TESTING I changed size of loop to 8. it should be variable iterateCover
+		//get block of bits to work on for this iteration(8 chars per block for cover)
+		for (; n < (8 * 5);) {
+			getBlockBits(pCoverBlock, blockSize);	//bits saved to global temp_bits array
+			memcpy(cover_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize); //copy from populated temp_bits to cover_bits
+			embed(pMsgData, pStegoData); //this func will grab bits embed message and check for complexity. will conjugate if necessary
 
-	pStegoFileHdr = (BITMAPFILEHEADER *)pStegoFile;
-	pStegoInfoHdr = (BITMAPINFOHEADER *)(pStegoFile + sizeof(BITMAPFILEHEADER));
-
-	pStegoData = pStegoFile + pStegoFileHdr->bfOffBits;
-	
-	printf("Value: %ld, Address: %p\n", *pStegoData, (void *)pStegoData);
-	*pStegoData = 40;
-	printf("Value: %ld, Address: %p\n", *pStegoData, (void *)pStegoData);
-
-	/*Here is where I start the loop for grabbing bits and checking for complexity and
-	embed if complex enough. I move the cover data pointer every 8 chars for each iteration.
-	The message data pointer should move every bitplane for every iteration and the stego data pointer 
-	should move every 8 chars for every iteration. */
-	int n = 0;
-	//for testing I changed size of loop to 8. it should be variable iterateCover
-	for (; n < 8;) {
-
-		//set flag to let getBlockBits func know to grab bits from cover 
-		//convert to CGC and calc coplexity
-		blockFlag = 0;
-
-		//if block complex enuff then embed from here
-		//because we still on the block we working on
-		if (getBlockBits(pCoverBlock, blockSize, blockFlag)) {
-			printf("Complex enough!!!!\n\n");
-			embed(pMsgData, pStegoData);
+			//the functions above iterate 8 times from given pointer to work on current block 
+			//so out here we do it as well to pass in next start of block for next iteration
+			pStegoData += 8;
+			pMsgData += 8;
+			pCoverBlock += 8;
+			n = n + 8;
+			printf("Iteration: %d, Size of cover in bytes: %d\n", n / 8, sizeOfCoverData);
 		}
-		//if block not complex enuff then move on to next block
-		else {
-			printf("Not complex enough!!!!\n\n");
-		}
-		pCoverBlock = pCoverBlock + 8;
-		n = n + 8;
-		printf("Iteration: %d, Size of cover in bytes: %d\n", n, sizeOfCoverData);
 	}
+	else {
 
-	//for debugging purposes, show file info on the screen
-	//displayFileInfo(argv[1], pCoverFileHdr, pSrcInfoHdr, pSrcColorTable, pCoverData);
-
-	// for debugging purposes, show file info on the screen
-	//displayFileInfo(argv[2], pMsgFileHdr, pMsgInfoHdr, pTgtColorTable, pMsgData);
+	}
 
 	// write the file to disk
 	//if(flag == 1)
@@ -556,14 +482,6 @@ void main(int argc, char *argv[])
 	//elseif(flag == 0)
 	//	writeFile(extractedFile, extractedFile->bfSize, flag);
 
-
-
-
-	//printf("Pointer value to start of data: %x, At Address: %p\n", *pCoverData, (void *)pCoverData);
-	//printf("Pointer value to end of data: %x, At Address: %p\n", *pCoverBlock, (void *)pCoverBlock);
-	//printf("Size of Cover data: %ld\n", sizeOfCoverData);
-	//printf("Size of Message data: %ld\n", sizeOfMsgData);
-	//printf("%d\n", pCoverFileHdr->bfOffBits);
 
 
 } // main

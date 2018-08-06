@@ -93,13 +93,13 @@ int writeFile(unsigned char *pFile, int fileSize, int flag)
 	int x;
 
 	// convert the mask value to a string
-	sprintf(msk, "%02x", gMask);
+	sprintf(msk, "%d", gNumLSB);
 
 	// make a new filename based upon the original
 	strcpy(newFileName, "Output_File");
 
 	// remove the .bmp (assumed)
-	x = (int)strlen(newFileName) - 4;
+	x = (int)strlen(newFileName);
 	newFileName[x] = 0;
 
 	//If the switch is set to -h
@@ -489,7 +489,12 @@ void main(int argc, char *argv[])
 		//if gNumLSB == 8, then the source would completely replace the target
 		
 		//takes the user input and converts from hex to integer value
-		gNumLSB = *(argv[5]) - 48;
+		if (strcmp(argv[1], "-e") == 0) {
+			gNumLSB = *(argv[4]) - 48;
+		}
+		else {
+			gNumLSB = *(argv[5]) - 48;
+		}
 		if(gNumLSB < 1 || gNumLSB > 7)
 		{
 			gNumLSB = 1;
@@ -575,10 +580,11 @@ void main(int argc, char *argv[])
 		}
 		
 		//save starting address of where conjugation map will be saved
-		int conjugation_addr = (int)pStegoBlock;
+		unsigned char *pConjAddr;
+		pConjAddr = pStegoBlock;
 		int intCounter = 0;
 		for (; n < iterateCover; ) {
-			//embed the conjugationmap
+			//EMBEDDING CONJUGATION MAP VALUES
 			getBlockBits(pCoverBlock, blockSize);
 			memcpy(cover_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize);
 			embedMap(conjugationMap, cover_bits, &intCounter, pStegoBlock);
@@ -592,39 +598,44 @@ void main(int argc, char *argv[])
 				break;
 			}
 		}
-		printf("pCoverFile, value: %x, Address: %p\n", *pCoverFile, (void *)pCoverFile);
-		printf("pStegoFile, value: %x, Address: %p\n", *pStegoFile, (void *)pStegoFile);
-		printf("value: %d\n", conjugation_addr);
+		printf("Start of CoverFile, value: %x, Address: %p\n", *pCoverFile, (void *)pCoverFile);
+		printf("Start of StegoFile, value: %x, Address: %p\n", *pStegoFile, (void *)pStegoFile);
+		printf("Conjugation addr: %x\n", (void*)pConjAddr);
+
+		unsigned char *pEndOfStegoFile = pStegoFile + pStegoFileHdr->bfSize;
+		unsigned char* pCoverLastBlock = (pCoverFile + pCoverFileHdr->bfSize) - 8;//pointer to last block in the file
+		unsigned char *pStegoLastBlock = (pStegoFile + pStegoFileHdr->bfSize) - 8;
 		
+		int offsetFromEnd = 0;
+		for (; pConjAddr < pEndOfStegoFile; pConjAddr++) {
+			offsetFromEnd++;
+		}
+
+		printf("Stego last Block: %x, Stego EOF: %x\n", (void*)pStegoLastBlock, (void*)pEndOfStegoFile);
+		printf("Offset from EOF: %d\n", offsetFromEnd);
+		printf("coverfilesize: %ld\n", coverFileSize);
+		printf("stegofilesize: %ld\n", pStegoFileHdr->bfSize);
+
 		int temp_array[32];
 
-		int addr = conjugation_addr;
 		//grab 32bits that the address of the last block. this last block will embedded with the address
 		//of the start of the conjugation map
 		int k = 0;
 		for (; k < 32; k++) {
-			unsigned int x = addr;//clean copy of char to work with
+			unsigned int x = offsetFromEnd;//clean copy of char to work with
 			unsigned int y = x << k; //remove unwanted higher bits by shifting bit we want to MSB
 			unsigned int z = y >> 31;//then shift the bit we want all the way down to LSB
 			temp_array[k] = z; //then store out wanted bit to our storage array
 		}
 
-		unsigned char *endOfFile = pCoverFile + pCoverFileHdr->bfSize;
-		unsigned char* lastBlock = (pCoverFile + pCoverFileHdr->bfSize) - 8;//pointer to last block in the file
-		unsigned char *pStegoLastBlock = (pStegoFile + pStegoFileHdr->bfSize) - 8;
-
-		printf("lastBlock: %x, EOF: %x\n", (void*)lastBlock, (void*)endOfFile);
-		printf("stegolastBlock: %x\n", (void*)pStegoLastBlock);
-		printf("coverfilesize: %ld\n", coverFileSize);
-		printf("file size from header: %ld\n", pCoverFileHdr->bfSize);
-		getBlockBits(lastBlock, blockSize);	//get the last block of data to embed address of start of conjugation map values 
+		getBlockBits(pCoverLastBlock, blockSize);	//get the last block of data to embed address of start of conjugation map values 
 		memcpy(cover_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize);
 
 		//g starts at 7 because LSB starts at index 7. h starts at 1 because the initial bit of all blocks is reserved 
 		//for lastbit of last block iteration
 		int g = 7, h = 0, f = 0; 
 
-		//EMBEDDING: starting at the LSB bit plane start embeding and stop at the defined bit plane
+		//EMBEDDING CONJUGATION ADDRESS: starting at the LSB bit plane start embeding and stop at the defined bit plane
 		//because in earlier part of code I save msb at index 0 of arrays I have to 
 		//start embedding at index 7 of these arrays to embed at LSB
 		while (f < 32) {
@@ -637,7 +648,7 @@ void main(int argc, char *argv[])
 		}
 
 		int i = 0;
-		printf("Writing the following to Stego bits in heap\n");
+		printf("Writing the following to Stego file in heap\n");
 		double sum = 0;
 		for (i = 0; i < 8; i++) {
 			int d = 0, sum = 0;
@@ -673,6 +684,74 @@ void main(int argc, char *argv[])
 		pOutFileHdr = (BITMAPFILEHEADER *)pOutFile;
 		pOutInfoHdr = (BITMAPINFOHEADER *)(pOutFile + sizeof(BITMAPFILEHEADER));
 
+		int x = 0;
+		//set conjugation map to all 0's
+		for (; x < 8192; x++) {
+			conjugationMap[x] = 0;
+		}
+		
+		//pointer to last block in the extract file
+		unsigned char * pExtractLastBlock = (pExtractFile + pExtractFileHdr->bfSize) - 8;
+		printf("Value at Last Block: %x, Address of Block: %p\n", *pExtractLastBlock, (void*)pExtractLastBlock);
+
+		unsigned char *pEndOfFile = pExtractFile + pExtractFileHdr->bfSize;
+		printf("Address of EOF:%x\n", (void*)pEndOfFile);
+
+
+		//get last block of extract file to get the addres of start of conjugation map values
+		getBlockBits(pExtractLastBlock, 8);
+		memcpy(extract_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize);
+
+		unsigned char addr[32];
+		//EXTRACTING OFFSET TO CONJUGATION MAP from end
+		int i = 7, f = 0;
+		for (; i > 3; i--) {
+			int d = 0;
+			for (; d < 8; d++) {
+				addr[f++] = extract_bits[d][i];
+			}
+		}
+
+		long long sum = 0;
+		for (i = 0; i < 32; i++) {
+			if (addr[i] == 1) {
+				sum += pow(2, (31 - i));
+			}
+		}
+	
+		printf("Offset from EOF:%lld\n", sum);
+				
+
+		while (sum-- > 0) {
+			pEndOfFile--;
+		}
+
+		printf("Offset from EOF:%ld\n", sum);
+		unsigned char *pConjugationAddr = pEndOfFile;
+		printf("Address of start of Conjugation Map:%x\n", (void*)pConjugationAddr);
+
+		f = 0;
+		while (f < 8192) {
+			getBlockBits(pConjugationAddr, blockSize);
+			memcpy(extract_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize);
+
+			for (i = 0; i < 4; i++) {
+				int d = 0;
+				for (; d < blockSize; d++) {
+					if (extract_bits[d][i] = 1) {
+						SetBit(conjugationMap, f++);
+					}
+					f++;
+						
+				}
+			}
+			pConjugationAddr += 8;
+
+		}
+
+
+
+
 		//get size of extraction file in 8 x 8 blocks
 		int iterateExtract = pExtractFileHdr->bfSize;
 		int n = 0;
@@ -687,7 +766,9 @@ void main(int argc, char *argv[])
 	// write the file to disk
 	if(flag == 1)
 		writeFile(pStegoFile, pStegoFileHdr->bfSize, flag);
-		//writeFile(extractedFile, extractedFile->bfSize, flag);
+	else {
+		writeFile(pOutFile, pOutFileHdr->bfSize, flag);
+	}
 
 
 

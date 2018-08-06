@@ -4,8 +4,14 @@ c:\users\odiep\source\repos\g10\project1\bpcs.cpp(359): warning C4244: '+=': con
 c:\users\odiep\source\repos\g10\project1\bpcs.cpp(426): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
 c:\users\odiep\source\repos\g10\project1\bpcs.cpp(456): warning C4326: return type of 'main' should be 'int' instead of 'void'
 c:\users\odiep\source\repos\g10\project1\bpcs.cpp(483): warning C4305: '=': truncation from 'double' to 'float'
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(646): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(616): warning C4477: 'printf' : format string '%x' requires an argument of type 'unsigned int', but variadic argument 1 has type 'void *'
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(616): warning C4477: 'printf' : format string '%x' requires an argument of type 'unsigned int', but variadic argument 2 has type 'void *'
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(617): warning C4477: 'printf' : format string '%x' requires an argument of type 'unsigned int', but variadic argument 1 has type 'void *'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(657): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(718): warning C4244: '+=': conversion from 'double' to '__int64', possible loss of data
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(603): warning C4477: 'printf' : format string '%x' requires an argument of type 'unsigned int', but variadic argument 1 has type 'void *'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(614): warning C4477: 'printf' : format string '%x' requires an argument of type 'unsigned int', but variadic argument 1 has type 'void *'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(614): warning C4477: 'printf' : format string '%x' requires an argument of type 'unsigned int', but variadic argument 2 has type 'void *'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(698): warning C4477: 'printf' : format string '%x' requires an argument of type 'unsigned int', but variadic argument 1 has type 'void *'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(729): warning C4477: 'printf' : format string '%ld' requires an argument of type 'long', but variadic argument 1 has type '__int64'
+  c:\users\odiep\source\repos\g10\project1\bpcs.cpp(729): note: consider using '%lld' in the format string
+  c:\users\odiep\source\repos\g10\project1\bpcs.cpp(729): note: consider using '%I64d' in the format string
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(731): warning C4477: 'printf' : format string '%x' requires an argument of type 'unsigned int', but variadic argument 1 has type 'void *'
   Project1.vcxproj -> C:\Users\odiep\source\repos\g10\Debug\Project1.exe

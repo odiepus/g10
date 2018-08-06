@@ -1,10 +1,11 @@
 ﻿  bpcs.cpp
 c:\users\odiep\source\repos\g10\project1\bpcs.cpp(49): warning C4305: 'initializing': truncation from 'double' to 'float'
 c:\users\odiep\source\repos\g10\project1\bpcs.cpp(359): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(442): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(454): warning C4326: return type of 'main' should be 'int' instead of 'void'
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(472): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(476): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(481): warning C4305: '=': truncation from 'double' to 'float'
-c:\users\odiep\source\repos\g10\project1\bpcs.cpp(594): warning C4477: 'printf' : format string '%x' requires an argument of type 'unsigned int', but variadic argument 1 has type 'unsigned char *'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(426): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(456): warning C4326: return type of 'main' should be 'int' instead of 'void'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(483): warning C4305: '=': truncation from 'double' to 'float'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(646): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(616): warning C4477: 'printf' : format string '%x' requires an argument of type 'unsigned int', but variadic argument 1 has type 'void *'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(616): warning C4477: 'printf' : format string '%x' requires an argument of type 'unsigned int', but variadic argument 2 has type 'void *'
+c:\users\odiep\source\repos\g10\project1\bpcs.cpp(617): warning C4477: 'printf' : format string '%x' requires an argument of type 'unsigned int', but variadic argument 1 has type 'void *'
   Project1.vcxproj -> C:\Users\odiep\source\repos\g10\Debug\Project1.exe

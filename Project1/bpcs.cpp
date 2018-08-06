@@ -369,22 +369,6 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock, int *iteration)
 	printf("\n");
 }
 
-void extractData(unsigned char *pExtractBlock, unsigned char *pOutFile, int iteration) {
-	//save the passed in pointers to local variables for use locally
-	unsigned char *pExtBlock = pExtractBlock;
-	unsigned char *pOutBlock = pOutFile;
-	
-	int bitPlane = gNumLSB;	//save bitplane value to local variable 
-
-	//check for conjugation
-	if (TestBit(conjugationMap, iteration)) {
-		conjugateBits(extract_bits);
-		printf("Block conjugated\n");
-	}
-
-
-
-}
 
 void embedMap(int map[8192], unsigned char bits[blockSize][bitBlockSize], int *count, unsigned char *pStegoBlock){
 	unsigned char temp_map_array[blockSize][bitBlockSize];
@@ -448,6 +432,24 @@ void embedMap(int map[8192], unsigned char bits[blockSize][bitBlockSize], int *c
 	}
 }
 
+void extractData(unsigned char *pExtractBlock, unsigned char *pOutFile, int iteration) {
+	//save the passed in pointers to local variables for use locally
+	unsigned char *pExtBlock = pExtractBlock;
+	unsigned char *pOutBlock = pOutFile;
+	
+	int bitPlane = gNumLSB;	//save bitplane value to local variable 
+
+
+
+	//check for conjugation
+	if (TestBit(conjugationMap, iteration)) {
+		conjugateBits(extract_bits);
+		printf("Block conjugated\n");
+	}
+
+
+
+}
 // Main function in LSB Steg
 // Parameters are used to indicate the input file and available options
 void main(int argc, char *argv[])
@@ -538,6 +540,7 @@ void main(int argc, char *argv[])
 		//copy entire cover file into a new heap space
 		//this will be our output where our secret message will be contained.
 		memcpy(pStegoFile, pCoverFile, coverFileSize);
+			getBlockBits(pCoverBlock, blockSize);
 
 		pStegoFileHdr = (BITMAPFILEHEADER *)pStegoFile;
 		pStegoInfoHdr = (BITMAPINFOHEADER *)(pStegoFile + sizeof(BITMAPFILEHEADER));
@@ -572,7 +575,7 @@ void main(int argc, char *argv[])
 		}
 		
 		//save starting address of where conjugation map will be saved
-		unsigned char *conjugation_addr = pStegoFile;
+		int conjugation_addr = (int)pStegoBlock;
 		int intCounter = 0;
 		for (; n < iterateCover; ) {
 			//embed the conjugationmap
@@ -591,12 +594,66 @@ void main(int argc, char *argv[])
 		}
 		printf("pCoverFile, value: %x, Address: %p\n", *pCoverFile, (void *)pCoverFile);
 		printf("pStegoFile, value: %x, Address: %p\n", *pStegoFile, (void *)pStegoFile);
-		printf("address: %x\n", conjugation_addr);
+		printf("value: %d\n", conjugation_addr);
+		
+		int temp_array[32];
 
+		int addr = conjugation_addr;
+		//grab 32bits that the address of the last block. this last block will embedded with the address
+		//of the start of the conjugation map
+		int k = 0;
+		for (; k < 32; k++) {
+			unsigned int x = addr;//clean copy of char to work with
+			unsigned int y = x << k; //remove unwanted higher bits by shifting bit we want to MSB
+			unsigned int z = y >> 31;//then shift the bit we want all the way down to LSB
+			temp_array[k] = z; //then store out wanted bit to our storage array
+		}
+
+		unsigned char *endOfFile = pCoverFile + pCoverFileHdr->bfSize;
+		unsigned char* lastBlock = (pCoverFile + pCoverFileHdr->bfSize) - 8;//pointer to last block in the file
+		unsigned char *pStegoLastBlock = (pStegoFile + pStegoFileHdr->bfSize) - 8;
+
+		printf("lastBlock: %x, EOF: %x\n", (void*)lastBlock, (void*)endOfFile);
+		printf("stegolastBlock: %x\n", (void*)pStegoLastBlock);
+		printf("coverfilesize: %ld\n", coverFileSize);
+		printf("file size from header: %ld\n", pCoverFileHdr->bfSize);
+		getBlockBits(lastBlock, blockSize);	//get the last block of data to embed address of start of conjugation map values 
+		memcpy(cover_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize);
+
+		//g starts at 7 because LSB starts at index 7. h starts at 1 because the initial bit of all blocks is reserved 
+		//for lastbit of last block iteration
+		int g = 7, h = 0, f = 0; 
+
+		//EMBEDDING: starting at the LSB bit plane start embeding and stop at the defined bit plane
+		//because in earlier part of code I save msb at index 0 of arrays I have to 
+		//start embedding at index 7 of these arrays to embed at LSB
+		while (f < 32) {
+			for (h = 0; h <bitBlockSize; h++) {
+				cover_bits[h][g] = temp_array[f];
+				f++;
+			}
+			g--;
+			if (g < 0) g = 7;
+		}
+
+		int i = 0;
+		printf("Writing the following to Stego bits in heap\n");
+		double sum = 0;
+		for (i = 0; i < 8; i++) {
+			int d = 0, sum = 0;
+			for (; d < 8; d++) {
+				if (cover_bits[i][d] == 1) {
+					sum += pow(2, (7 - d));
+				}
+			}
+			*pStegoLastBlock = sum;
+			printf("After write, value: %x, Address: %p\n", *pStegoLastBlock, (void *)pStegoLastBlock);
+			pStegoLastBlock++;
+		}
 	}
 	else {
 		pExtractFile = readFile(argv[2], &extractFileSize);
-		if (pCoverFile == NULL) return;
+		if (pExtractFile == NULL) return;
 		// Set up pointers to various parts of the embedded file
 		pExtractFileHdr = (BITMAPFILEHEADER *)pExtractFile;
 		pExtractInfoHdr = (BITMAPINFOHEADER *)(pExtractFile + sizeof(BITMAPFILEHEADER));
@@ -604,6 +661,7 @@ void main(int argc, char *argv[])
 		// file header indicates where image data begins
 		pExtractData = pExtractFile + pExtractFileHdr->bfOffBits;
 
+		pExtractBlock = pExtractData;
 		//create heap space for our out file This will contain our secret message
 		//that will be written out to our outfile
 		pOutFile = (unsigned char *)malloc(pExtractFileHdr->bfSize);
@@ -615,17 +673,13 @@ void main(int argc, char *argv[])
 		pOutFileHdr = (BITMAPFILEHEADER *)pOutFile;
 		pOutInfoHdr = (BITMAPINFOHEADER *)(pOutFile + sizeof(BITMAPFILEHEADER));
 
-		pOutData = pOutFile + pOutFileHdr->bfOffBits;
-
 		//get size of extraction file in 8 x 8 blocks
-		int sizeOfExtractData = pExtractFileHdr->bfSize - pCoverFileHdr->bfOffBits;
-		int iterateExtract = sizeOfExtractData - (sizeOfExtractData % 8);
-
+		int iterateExtract = pExtractFileHdr->bfSize;
 		int n = 0;
 		for (; n < iterateExtract; n++) {
-			getBlockBits(pExtractData, blockSize);
+			getBlockBits(pExtractBlock, blockSize);
 			memcpy(extract_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize); //copy from populated temp_bits to cover_bits
-			extractData(pExtractData, pOutData, n / 8);
+			extractData(pExtractBlock, pOutData, n / 8);
 
 		}
 	}

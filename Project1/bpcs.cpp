@@ -283,7 +283,6 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock, int *iteration)
 			}
 			printf("\n");
 		}
-		//stego_bits[7][bitPlane - 1] = 1; //set the bit modifier to denote conjugation
 		SetBit(conjugationMap, *iteration);
 	}
 
@@ -432,21 +431,54 @@ void embedMap(int map[8192], unsigned char bits[blockSize][bitBlockSize], int *c
 	}
 }
 
-void extractData(unsigned char *pExtractBlock, unsigned char *pOutFile, int iteration) {
+void extractData(unsigned char *pExtractBlock, unsigned char *pOutFile, int *iteration) {
 	//save the passed in pointers to local variables for use locally
 	unsigned char *pExtBlock = pExtractBlock;
 	unsigned char *pOutBlock = pOutFile;
-	
+	unsigned char temp_bits[64];
+
 	int bitPlane = gNumLSB;	//save bitplane value to local variable 
 
+	//extract the message block from the 8x8 block
+	int i = 7, f = 0;
+	for (; i > gNumLSB - 1; i--) {
+		int d = 0;
+		for (; d < 8; d++) {
+			temp_bits[f++] = extract_bits[d][i];
+		}
+	}
+	
+	
 
-
-	//check for conjugation
-	if (TestBit(conjugationMap, iteration)) {
-		conjugateBits(extract_bits);
-		printf("Block conjugated\n");
+	f = 0;
+	//place the bits in linear array into 2d array for conversion to chars
+	for (i = 0; i < gNumLSB; i++) {
+		int d = 0;
+		for (; d < bitBlockSize; d++) {
+			out_bits[i][d] = temp_bits[f++];
+		}
 	}
 
+	//check for conjugation using the iteration to denote the block we are on
+	if (TestBit(conjugationMap, *iteration)) {
+		conjugateBits(out_bits);	//if bit is 1 then we conjugate the block to get back original message
+		printf("Block unconjugated\n");
+	}
+
+	//code to convert bits to char for storage to outfile in heap
+	int sum = 0;
+	for (i = 0; i < 8; i++) {
+		int d = 0, sum = 0;
+		for (; d < 8; d++) {
+			if (out_bits[i][d] == 1) {
+				sum += pow(2, (7 - d));
+			}
+		}
+
+		*pOutBlock = sum;
+		printf("After write, value: %x, Address: %p\n", *pOutBlock, (void *)pOutBlock);
+		pOutBlock++;
+	}
 
 
 }
@@ -552,6 +584,8 @@ void main(int argc, char *argv[])
 
 		pStegoData = pStegoFile + pStegoFileHdr->bfOffBits;
 		pStegoBlock = pStegoData;
+
+		int msgSize = pMsgFileHdr->bfSize;
 		/*Here is where I start the loop for grabbing bits and checking for complexity and
 		embed if complex enough. I move the cover data pointer every 8 chars for each iteration.
 		The message data pointer should move every bitplane for every iteration and the stego data pointer
@@ -565,14 +599,14 @@ void main(int argc, char *argv[])
 			getBlockBits(pCoverBlock, blockSize);	//bits saved to global temp_bits array
 			memcpy(cover_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize); //copy from populated temp_bits to cover_bits
 			embed(pMsgBlock, pStegoBlock, &iteration); //this func will grab bits embed message and check for complexity. will conjugate if necessary
-			iteration++;
+			iteration++;//iterate the block number i am on for use in conjugationMap to record conjugations
 			//the functions above iterate 8 times from given pointer to work on current block 
 			//so out here we do it as well to pass in next start of block for next iteration
 			pStegoBlock += 8;
 			pMsgBlock += gNumLSB;
 			pCoverBlock += 8;
 			n = n + 8;
-			printf("Iteration: %d, Size of cover in bytes: %d\n", n / 8, sizeOfCoverData);
+			printf("Iteration: %d, Size of cover in bytes: %d\n", iteration, sizeOfCoverData);
 			if (pMsgBlock > pMsgFileHdr->bfSize + pMsgFile) {
 				printf("Reached end of message file\n");
 				break;
@@ -598,23 +632,29 @@ void main(int argc, char *argv[])
 				break;
 			}
 		}
-		printf("Start of CoverFile, value: %x, Address: %p\n", *pCoverFile, (void *)pCoverFile);
-		printf("Start of StegoFile, value: %x, Address: %p\n", *pStegoFile, (void *)pStegoFile);
-		printf("Conjugation addr: %x\n", (void*)pConjAddr);
 
 		unsigned char *pEndOfStegoFile = pStegoFile + pStegoFileHdr->bfSize;
 		unsigned char* pCoverLastBlock = (pCoverFile + pCoverFileHdr->bfSize) - 8;//pointer to last block in the file
 		unsigned char *pStegoLastBlock = (pStegoFile + pStegoFileHdr->bfSize) - 8;
 		
+		unsigned char *pPrintConjAddr = pConjAddr;
 		int offsetFromEnd = 0;
 		for (; pConjAddr < pEndOfStegoFile; pConjAddr++) {
 			offsetFromEnd++;
 		}
 
+		printf("\n\n");
+		printf("Start of CoverFile, value: %x, Address: %p\n", *pCoverFile, (void *)pCoverFile);
+		printf("Start of StegoFile, value: %x, Address: %p\n", *pStegoFile, (void *)pStegoFile);
+		printf("Start of Stego data, value: %x, Address: %p\n", *pStegoData, (void *)pStegoData);
+		printf("Conjugation addr: %x\n", (void*)pPrintConjAddr);
 		printf("Stego last Block: %x, Stego EOF: %x\n", (void*)pStegoLastBlock, (void*)pEndOfStegoFile);
+
+		printf("Iteration of data embedding: %d\n", iteration);
 		printf("Offset from EOF: %d\n", offsetFromEnd);
 		printf("coverfilesize: %ld\n", coverFileSize);
 		printf("stegofilesize: %ld\n", pStegoFileHdr->bfSize);
+		printf("\n\n");
 
 		int temp_array[32];
 
@@ -721,7 +761,6 @@ void main(int argc, char *argv[])
 	
 		printf("Offset from EOF:%lld\n", sum);
 				
-
 		while (sum-- > 0) {
 			pEndOfFile--;
 		}
@@ -731,7 +770,7 @@ void main(int argc, char *argv[])
 		printf("Address of start of Conjugation Map:%x\n", (void*)pConjugationAddr);
 
 		f = 0;
-		while (f < 8192) {
+		while (f < 8192 * 32) {
 			getBlockBits(pConjugationAddr, blockSize);
 			memcpy(extract_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize);
 
@@ -741,12 +780,9 @@ void main(int argc, char *argv[])
 					if (extract_bits[d][i] = 1) {
 						SetBit(conjugationMap, f++);
 					}
-					f++;
-						
 				}
 			}
 			pConjugationAddr += 8;
-
 		}
 
 
@@ -754,12 +790,17 @@ void main(int argc, char *argv[])
 
 		//get size of extraction file in 8 x 8 blocks
 		int iterateExtract = pExtractFileHdr->bfSize;
-		int n = 0;
+		int n = 0, iteration = 0;
 		for (; n < iterateExtract; n++) {
 			getBlockBits(pExtractBlock, blockSize);
 			memcpy(extract_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize); //copy from populated temp_bits to cover_bits
-			extractData(pExtractBlock, pOutData, n / 8);
+			extractData(pExtractBlock, pOutData, &iteration);
+			
 
+			pExtractBlock += 8;
+
+			//at some point I will write an if that will stop the loop for a moment to get the header info on message file size
+			//so that I can set a stopping point without having to loop all the way thru the stego file.
 		}
 	}
 

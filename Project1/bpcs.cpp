@@ -22,8 +22,8 @@ BITMAPINFOHEADER *pCoverInfoHdr, *pMsgInfoHdr, *pStegoInfoHdr, *pExtractInfoHdr,
 RGBQUAD *pSrcColorTable, *pTgtColorTable;
 
 unsigned char *pCoverFile, *pMsgFile, *pStegoFile, *pExtractFile, *pOutFile,
-		*pCoverData, *pMsgData, *pStegoData, *pExtractData, *pOutData,
-		*pCoverBlock, *pMsgBlock, *pStegoBlock, *pExtractBlock, *pOutBlock;
+*pCoverData, *pMsgData, *pStegoData, *pExtractData, *pOutData,
+*pCoverBlock, *pMsgBlock, *pStegoBlock, *pExtractBlock, *pOutBlock;
 
 unsigned char *pTempBlock;
 
@@ -45,14 +45,14 @@ unsigned char out_bits[blockSize][bitBlockSize];
 
 unsigned char temp_out_array[65];
 int blockFlag = 0;	//1 for message, 0 for cover
-//alpha is the threshold variable
+					//alpha is the threshold variable
 float alpha = 0.30;
 float blockComplex = 0.0;
 
 // default values
 unsigned char gNumLSB = 1, gMask = 0xfe, gShift = 7;
 
-  // reads specified bitmap file from disk
+// reads specified bitmap file from disk
 unsigned char *readFile(char *fileName, int *fileSize)
 {
 	FILE *ptrFile;
@@ -104,8 +104,8 @@ int writeFile(unsigned char *pFile, int fileSize, int flag)
 
 	//If the switch is set to -h
 	if (flag == 1) {
-	strcat(newFileName, "_mask_");
-	strcat(newFileName, msk);	// name indicates which bit plane(s) was/were saved  
+		strcat(newFileName, "_mask_");
+		strcat(newFileName, msk);	// name indicates which bit plane(s) was/were saved  
 	}
 
 	// add the .bmp back to the file name
@@ -132,7 +132,7 @@ int writeFile(unsigned char *pFile, int fileSize, int flag)
 	return(SUCCESS);
 } // writeFile
 
-// prints help message to the screen
+  // prints help message to the screen
 void printHelpHide()
 {
 	printf("BPCS: Hiding Mode:\n");
@@ -145,7 +145,7 @@ void printHelpHide()
 	return;
 } // printHelpHide
 
-// prints help extract message to the screen
+  // prints help extract message to the screen
 void printHelpExtract()
 {
 	printf("BPCS: Extracting Mode:\n");
@@ -195,7 +195,6 @@ float convertToCGC(unsigned char array_bits[blockSize][bitBlockSize], int blockL
 			toCGC[n][p] = array_bits[n][p] ^ array_bits[n][p - 1];
 		}
 	}
-	printf("\n");
 	return calcComplexity(toCGC, blockLength);
 }
 
@@ -213,7 +212,7 @@ void getBlockBits(unsigned char *pData, int charsToGet) {
 			unsigned char y = x << k; //remove unwanted higher bits by shifting bit we want to MSB
 			unsigned char z = y >> 7;//then shift the bit we want all the way down to LSB
 			temp_bits[m][k] = z; //then store out wanted bit to our storage array
-			//printf("%d-", temp_bits[m][k]);
+								 //printf("%d-", temp_bits[m][k]);
 		}
 
 		//printf("Value: %x, Address: %p\n", *pTempBlock, (void *)pTempBlock);
@@ -228,7 +227,6 @@ void conjugateBits(unsigned char bits[blockSize][bitBlockSize])
 {
 	//if the newly embedded block is not complex enough then we must conjugate it 
 	//to raise its complexity
-	printf("Block not complex enough\n\n");
 	int i = 0;
 	for (; i < 8; i++) {
 		int d = 0;
@@ -251,7 +249,6 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock, int *iteration)
 	unsigned char *pStegoBlockIterate;
 	pStegoBlockIterate = pStegoBlock;
 
-	printf("\nBitplane is: %d\n", bitPlane);
 
 	/*i pass in the bitplane because this will get for me the nuber of bits I will embed.
 	suppose bitplane is 4. then we would only want to embed 4*8bits = 32 totals bits to embed.
@@ -264,42 +261,14 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock, int *iteration)
 	memcpy(message_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize);
 
 	if (convertToCGC(message_bits, bitPlane) == 0) {
-		printf("Message bits not complex enough; before conjugation\n");
-		int c = 0;
-		for (; c < bitPlane; c++) {
-			int d = 0;
-			for (; d < bitBlockSize; d++) {
-				printf("%d", message_bits[c][d]);
-			}
-			printf("\n");
-		}
 		conjugateBits(message_bits);
-		printf("Message bits not complex enough; after conjugation\n");
-		c = 0;
-		for (; c < bitPlane; c++) {
-			int d = 0;
-			for (; d < bitBlockSize; d++) {
-				printf("%d", message_bits[c][d]);
-			}
-			printf("\n");
-		}
 		SetBit(conjugationMap, *iteration);
 	}
 
 	//copy cover bits to stego bits so we can get ready to embed
 	memcpy(stego_bits, cover_bits, sizeof(unsigned char) * blockSize * bitBlockSize);
 
-	printf("Want to embed into this:\n");
-	int c = 0;
-	for (; c < blockSize; c++) {
-		int d = 0;
-		for (; d < bitBlockSize; d++) {
-			printf("%d", stego_bits[c][d]);
-		}
-		printf("\n");
-	}
 
-	printf("\nMessage stream I will embed into stego bit block\n");
 	//message bits should never be more than 64 bits total
 	unsigned char temp_array[64];
 	//copy message bits to linear temp array for easier copying into stego array
@@ -308,49 +277,29 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock, int *iteration)
 		int b = 0;
 		for (; b < bitBlockSize; b++) {
 			temp_array[f] = message_bits[e][b];
-			printf("%d", temp_array[f]);
 			f++;
 		}
-		printf("\n");
 	}
-	printf("\n");
-	printf("\n");
-
-	printf("f is: %d\n\n", f);
 
 	f = 0;	//use this it iterate thru linear array of messagebits; will be used to stop at correct iteratation
 
-	//g starts at 7 because LSB starts at index 7. h starts at 1 because the initial bit of all blocks is reserved 
-	//for lastbit of last block iteration
-	int g = 7, h = 0;	
+			//g starts at 7 because LSB starts at index 7. h starts at 1 because the initial bit of all blocks is reserved 
+			//for lastbit of last block iteration
+	int g = 7, h = 0;
 
 	//EMBEDDING: starting at the LSB bit plane start embeding and stop at the defined bit plane
 	//because in earlier part of code I save msb at index 0 of arrays I have to 
 	//start embedding at index 7 of these arrays to embed at LSB
 	while (f < (bitPlane * 8)) {
-		for(h = 0; h <bitBlockSize; h++){
+		for (h = 0; h <bitBlockSize; h++) {
 			stego_bits[h][g] = temp_array[f];
 			f++;
 		}
 		g--;
 		if (g < 0) g = 7;
 	}
-	printf("f is: %d\n\n", f);
-
-	printf("What the stego bit block looks like after embed:\n");
-	int i = 0;
-	for (i = 0; i < 8; i++) {
-		int d = 0;
-		for (; d < 8; d++) {
-			printf("%d", stego_bits[i][d]);
-		}
-		printf("\n");
-	}
-	printf("\n");
-	printf("\n");
-
-	printf("Writing the following to Stegofile in heap\n");
 	double sum = 0;
+	int i = 0;
 	for (i = 0; i < 8; i++) {
 		int d = 0, sum = 0;
 		for (; d < 8; d++) {
@@ -360,16 +309,13 @@ void embed(unsigned char *pMsgBlock, unsigned char *pStegoBlock, int *iteration)
 		}
 
 		*pStegoBlockIterate = sum;
-		printf("After write, value: %x, Address: %p\n", *pStegoBlockIterate, (void *)pStegoBlockIterate);
 		pStegoBlockIterate++;
 	}
-	
-	printf("\n");
-	printf("\n");
+
 }
 
 
-void embedMap(int map[8192], unsigned char bits[blockSize][bitBlockSize], int *count, unsigned char *pStegoBlock){
+void embedMap(int map[8192], unsigned char bits[blockSize][bitBlockSize], int *count, unsigned char *pStegoBlock) {
 	unsigned char temp_map_array[blockSize][bitBlockSize];
 	unsigned char *pStegoBlockIterate;
 	pStegoBlockIterate = pStegoBlock;
@@ -403,9 +349,9 @@ void embedMap(int map[8192], unsigned char bits[blockSize][bitBlockSize], int *c
 	int g = 7, h = 0;
 	f = 0; //f is reset for use again for the linear array
 
-	//EMBEDDING: starting at the LSB bit plane start embeding and stop at the defined bit plane
-	//because in earlier part of code I save msb at index 0 of arrays I have to 
-	//start embedding at index 7 of these arrays to embed at LSB
+		   //EMBEDDING: starting at the LSB bit plane start embeding and stop at the defined bit plane
+		   //because in earlier part of code I save msb at index 0 of arrays I have to 
+		   //start embedding at index 7 of these arrays to embed at LSB
 	while (f < (gNumLSB * 8)) {
 		for (h = 0; h <bitBlockSize; h++) {
 			bits[h][g] = flatten_array[f];
@@ -414,9 +360,6 @@ void embedMap(int map[8192], unsigned char bits[blockSize][bitBlockSize], int *c
 		g--;
 		if (g < 0) g = 7;
 	}
-	printf("f is: %d\n\n", f);
-
-	printf("Writing the following to Stegofile in heap\n");
 	double sum = 0;
 	for (i = 0; i < 8; i++) {
 		int d = 0, sum = 0;
@@ -426,7 +369,6 @@ void embedMap(int map[8192], unsigned char bits[blockSize][bitBlockSize], int *c
 			}
 		}
 		*pStegoBlockIterate = sum;
-		printf("After write, value: %x, Address: %p\n", *pStegoBlockIterate, (void *)pStegoBlockIterate);
 		pStegoBlockIterate++;
 	}
 }
@@ -439,7 +381,7 @@ void extractData(unsigned char *pExtractBlock, unsigned char *pOutFile, int *ite
 
 	int bitPlane = gNumLSB;	//save bitplane value to local variable 
 
-	//extract the message block from the 8x8 block
+							//extract the message block from the 8x8 block
 	int i = 7, f = 0;
 	for (; i > gNumLSB - 1; i--) {
 		int d = 0;
@@ -447,8 +389,8 @@ void extractData(unsigned char *pExtractBlock, unsigned char *pOutFile, int *ite
 			temp_bits[f++] = extract_bits[d][i];
 		}
 	}
-	
-	
+
+
 
 	f = 0;
 	//place the bits in linear array into 2d array for conversion to chars
@@ -462,7 +404,6 @@ void extractData(unsigned char *pExtractBlock, unsigned char *pOutFile, int *ite
 	//check for conjugation using the iteration to denote the block we are on
 	if (TestBit(conjugationMap, *iteration)) {
 		conjugateBits(out_bits);	//if bit is 1 then we conjugate the block to get back original message
-		printf("Block unconjugated\n");
 	}
 
 	//code to convert bits to char for storage to outfile in heap
@@ -476,7 +417,6 @@ void extractData(unsigned char *pExtractBlock, unsigned char *pOutFile, int *ite
 		}
 
 		*pOutBlock = sum;
-		printf("After write, value: %x, Address: %p\n", *pOutBlock, (void *)pOutBlock);
 		pOutBlock++;
 	}
 
@@ -519,7 +459,7 @@ void main(int argc, char *argv[])
 		// the range for gNumLSB is 1 - 7;  if gNumLSB == 0, then the mask would be 0xFF and the
 		// shift value would be 8, leaving the target unmodified during embedding or extracting
 		//if gNumLSB == 8, then the source would completely replace the target
-		
+
 		//takes the user input and converts from hex to integer value
 		if (strcmp(argv[1], "-e") == 0) {
 			gNumLSB = *(argv[4]) - 48;
@@ -527,13 +467,13 @@ void main(int argc, char *argv[])
 		else {
 			gNumLSB = *(argv[5]) - 48;
 		}
-		if(gNumLSB < 1 || gNumLSB > 7)
+		if (gNumLSB < 1 || gNumLSB > 7)
 		{
 			gNumLSB = 1;
 			printf("The number specified for LSB was invalid, using the default value of '1'.\n\n");
 		}
 	}
-	
+
 	int x = 0;
 	//set conjugation map to all 0's
 	for (; x < 8192; x++) {
@@ -577,7 +517,7 @@ void main(int argc, char *argv[])
 		//copy entire cover file into a new heap space
 		//this will be our output where our secret message will be contained.
 		memcpy(pStegoFile, pCoverFile, coverFileSize);
-			getBlockBits(pCoverBlock, blockSize);
+		getBlockBits(pCoverBlock, blockSize);
 
 		pStegoFileHdr = (BITMAPFILEHEADER *)pStegoFile;
 		pStegoInfoHdr = (BITMAPINFOHEADER *)(pStegoFile + sizeof(BITMAPFILEHEADER));
@@ -600,19 +540,18 @@ void main(int argc, char *argv[])
 			memcpy(cover_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize); //copy from populated temp_bits to cover_bits
 			embed(pMsgBlock, pStegoBlock, &iteration); //this func will grab bits embed message and check for complexity. will conjugate if necessary
 			iteration++;//iterate the block number i am on for use in conjugationMap to record conjugations
-			//the functions above iterate 8 times from given pointer to work on current block 
-			//so out here we do it as well to pass in next start of block for next iteration
+						//the functions above iterate 8 times from given pointer to work on current block 
+						//so out here we do it as well to pass in next start of block for next iteration
 			pStegoBlock += 8;
 			pMsgBlock += gNumLSB;
 			pCoverBlock += 8;
 			n = n + 8;
-			printf("Iteration: %d, Size of cover in bytes: %d\n", iteration, sizeOfCoverData);
 			if (pMsgBlock > pMsgFileHdr->bfSize + pMsgFile) {
 				printf("Reached end of message file\n");
 				break;
 			}
 		}
-		
+
 		//save starting address of where conjugation map will be saved
 		unsigned char *pConjAddr;
 		pConjAddr = pStegoBlock;
@@ -622,7 +561,7 @@ void main(int argc, char *argv[])
 			getBlockBits(pCoverBlock, blockSize);
 			memcpy(cover_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize);
 			embedMap(conjugationMap, cover_bits, &intCounter, pStegoBlock);
-			
+
 			pStegoBlock += 8;
 			pCoverBlock += 8;
 			n += 8;
@@ -636,7 +575,7 @@ void main(int argc, char *argv[])
 		unsigned char *pEndOfStegoFile = pStegoFile + pStegoFileHdr->bfSize;
 		unsigned char* pCoverLastBlock = (pCoverFile + pCoverFileHdr->bfSize) - 8;//pointer to last block in the file
 		unsigned char *pStegoLastBlock = (pStegoFile + pStegoFileHdr->bfSize) - 8;
-		
+
 		unsigned char *pPrintConjAddr = pConjAddr;
 		int offsetFromEnd = 0;
 		for (; pConjAddr < pEndOfStegoFile; pConjAddr++) {
@@ -651,6 +590,7 @@ void main(int argc, char *argv[])
 		printf("Stego last Block: %x, Stego EOF: %x\n", (void*)pStegoLastBlock, (void*)pEndOfStegoFile);
 
 		printf("Iteration of data embedding: %d\n", iteration);
+		printf("Percentage of cover file data that was used by message file: %f\n", (float)(iteration / iterateCover) * 100);
 		printf("Offset from EOF: %d\n", offsetFromEnd);
 		printf("coverfilesize: %ld\n", coverFileSize);
 		printf("stegofilesize: %ld\n", pStegoFileHdr->bfSize);
@@ -673,7 +613,7 @@ void main(int argc, char *argv[])
 
 		//g starts at 7 because LSB starts at index 7. h starts at 1 because the initial bit of all blocks is reserved 
 		//for lastbit of last block iteration
-		int g = 7, h = 0, f = 0; 
+		int g = 7, h = 0, f = 0;
 
 		//EMBEDDING CONJUGATION ADDRESS: starting at the LSB bit plane start embeding and stop at the defined bit plane
 		//because in earlier part of code I save msb at index 0 of arrays I have to 
@@ -729,7 +669,7 @@ void main(int argc, char *argv[])
 		for (; x < 8192; x++) {
 			conjugationMap[x] = 0;
 		}
-		
+
 		//pointer to last block in the extract file
 		unsigned char * pExtractLastBlock = (pExtractFile + pExtractFileHdr->bfSize) - 8;
 		printf("Value at Last Block: %x, Address of Block: %p\n", *pExtractLastBlock, (void*)pExtractLastBlock);
@@ -758,9 +698,9 @@ void main(int argc, char *argv[])
 				sum += pow(2, (31 - i));
 			}
 		}
-	
+
 		printf("Offset from EOF:%lld\n", sum);
-				
+
 		while (sum-- > 0) {
 			pEndOfFile--;
 		}
@@ -784,10 +724,6 @@ void main(int argc, char *argv[])
 			}
 			pConjugationAddr += 8;
 		}
-
-
-
-
 		//get size of extraction file in 8 x 8 blocks
 		int iterateExtract = pExtractFileHdr->bfSize;
 		int n = 0, iteration = 0;
@@ -795,7 +731,7 @@ void main(int argc, char *argv[])
 			getBlockBits(pExtractBlock, blockSize);
 			memcpy(extract_bits, temp_bits, sizeof(unsigned char) * blockSize * bitBlockSize); //copy from populated temp_bits to cover_bits
 			extractData(pExtractBlock, pOutData, &iteration);
-			
+
 
 			pExtractBlock += 8;
 
@@ -805,7 +741,7 @@ void main(int argc, char *argv[])
 	}
 
 	// write the file to disk
-	if(flag == 1)
+	if (flag == 1)
 		writeFile(pStegoFile, pStegoFileHdr->bfSize, flag);
 	else {
 		writeFile(pOutFile, pOutFileHdr->bfSize, flag);

@@ -565,9 +565,7 @@ void main(int argc, char *argv[])
 			pStegoBlock += 8;
 			pCoverBlock += 8;
 			n += 8;
-			printf("Iteration: %d\n", n / 8);
-			if (intCounter >= 8192) {
-				printf("Reached end of conjucgation map\n");
+			if (intCounter > iteration) {
 				break;
 			}
 		}
@@ -590,7 +588,8 @@ void main(int argc, char *argv[])
 		printf("Stego last Block: %x, Stego EOF: %x\n", (void*)pStegoLastBlock, (void*)pEndOfStegoFile);
 
 		printf("Iteration of data embedding: %d\n", iteration);
-		printf("Percentage of cover file data that was used by message file: %f\n", (float)(iteration / iterateCover) * 100);
+		printf("Total block in cover file data: %d\n", iterateCover);
+		printf("Percentage of cover file data that was used by message file: %.2f \n", (float)((float)iteration / ((float) iterateCover/8)) * (float)100);
 		printf("Offset from EOF: %d\n", offsetFromEnd);
 		printf("coverfilesize: %ld\n", coverFileSize);
 		printf("stegofilesize: %ld\n", pStegoFileHdr->bfSize);
@@ -628,7 +627,6 @@ void main(int argc, char *argv[])
 		}
 
 		int i = 0;
-		printf("Writing the following to Stego file in heap\n");
 		double sum = 0;
 		for (i = 0; i < 8; i++) {
 			int d = 0, sum = 0;
@@ -638,7 +636,6 @@ void main(int argc, char *argv[])
 				}
 			}
 			*pStegoLastBlock = sum;
-			printf("After write, value: %x, Address: %p\n", *pStegoLastBlock, (void *)pStegoLastBlock);
 			pStegoLastBlock++;
 		}
 	}
